@@ -41,7 +41,9 @@ extern int spkac_main(int argc,char *argv[]);
 extern int smime_main(int argc,char *argv[]);
 extern int rand_main(int argc,char *argv[]);
 extern int engine_main(int argc,char *argv[]);
+#ifndef OPENSSL_NO_OCSP
 extern int ocsp_main(int argc,char *argv[]);
+#endif
 extern int prime_main(int argc,char *argv[]);
 
 #define FUNC_TYPE_GENERAL	1

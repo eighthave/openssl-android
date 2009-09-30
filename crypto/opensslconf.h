@@ -4,11 +4,15 @@
 /* OpenSSL was configured with the following options: */
 #ifndef OPENSSL_DOING_MAKEDEPEND
 
+
 #ifndef OPENSSL_NO_BF
 # define OPENSSL_NO_BF
 #endif
 #ifndef OPENSSL_NO_CAMELLIA
 # define OPENSSL_NO_CAMELLIA
+#endif
+#ifndef OPENSSL_NO_CAPIENG
+# define OPENSSL_NO_CAPIENG
 #endif
 #ifndef OPENSSL_NO_CAST
 # define OPENSSL_NO_CAST
@@ -22,8 +26,14 @@
 #ifndef OPENSSL_NO_IDEA
 # define OPENSSL_NO_IDEA
 #endif
+#ifndef OPENSSL_NO_JPAKE
+# define OPENSSL_NO_JPAKE
+#endif
 #ifndef OPENSSL_NO_KRB5
 # define OPENSSL_NO_KRB5
+#endif
+#ifndef OPENSSL_NO_MD2
+# define OPENSSL_NO_MD2
 #endif
 #ifndef OPENSSL_NO_MDC2
 # define OPENSSL_NO_MDC2
@@ -37,11 +47,9 @@
 #ifndef OPENSSL_NO_SEED
 # define OPENSSL_NO_SEED
 #endif
-#ifndef OPENSSL_NO_TLSEXT
-# define OPENSSL_NO_TLSEXT
-#endif
 
 #endif /* OPENSSL_DOING_MAKEDEPEND */
+
 #ifndef OPENSSL_THREADS
 # define OPENSSL_THREADS
 #endif
@@ -60,6 +68,9 @@
 # if defined(OPENSSL_NO_CAMELLIA) && !defined(NO_CAMELLIA)
 #  define NO_CAMELLIA
 # endif
+# if defined(OPENSSL_NO_CAPIENG) && !defined(NO_CAPIENG)
+#  define NO_CAPIENG
+# endif
 # if defined(OPENSSL_NO_CAST) && !defined(NO_CAST)
 #  define NO_CAST
 # endif
@@ -72,8 +83,14 @@
 # if defined(OPENSSL_NO_IDEA) && !defined(NO_IDEA)
 #  define NO_IDEA
 # endif
+# if defined(OPENSSL_NO_JPAKE) && !defined(NO_JPAKE)
+#  define NO_JPAKE
+# endif
 # if defined(OPENSSL_NO_KRB5) && !defined(NO_KRB5)
 #  define NO_KRB5
+# endif
+# if defined(OPENSSL_NO_MD2) && !defined(NO_MD2)
+#  define NO_MD2
 # endif
 # if defined(OPENSSL_NO_MDC2) && !defined(NO_MDC2)
 #  define NO_MDC2
@@ -87,12 +104,24 @@
 # if defined(OPENSSL_NO_SEED) && !defined(NO_SEED)
 #  define NO_SEED
 # endif
-# if defined(OPENSSL_NO_TLSEXT) && !defined(NO_TLSEXT)
-#  define NO_TLSEXT
-# endif
 #endif
 
 /* crypto/opensslconf.h.in */
+
+#ifdef OPENSSL_DOING_MAKEDEPEND
+
+/* Include any symbols here that have to be explicitly set to enable a feature
+ * that should be visible to makedepend.
+ *
+ * [Our "make depend" doesn't actually look at this, we use actual build settings
+ * instead; we want to make it easy to remove subdirectories with disabled algorithms.]
+ */
+
+#ifndef OPENSSL_FIPS
+#define OPENSSL_FIPS
+#endif
+
+#endif
 
 /* Generate 80386 code? */
 #undef I386_ONLY

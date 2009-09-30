@@ -1,5 +1,5 @@
-/* crypto/md/md2.h */
-/* Copyright (C) 1995-1997 Eric Young (eay@cryptsoft.com)
+/* crypto/rand/rand_lib.c */
+/* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
  * This package is an SSL implementation written
@@ -56,37 +56,97 @@
  * [including the GNU Public Licence.]
  */
 
-#ifndef HEADER_MD2_H
-#define HEADER_MD2_H
-
-#include <openssl/opensslconf.h> /* OPENSSL_NO_MD2, MD2_INT */
-#ifdef OPENSSL_NO_MD2
-#error MD2 is disabled.
-#endif
-#include <stddef.h>
-
-#define MD2_DIGEST_LENGTH	16
-#define MD2_BLOCK       	16
-
-#ifdef  __cplusplus
-extern "C" {
+#include <stdio.h>
+#include <time.h>
+#include "cryptlib.h"
+#include "rand_lcl.h"
+#include <openssl/rand.h>
+#ifdef OPENSSL_FIPS
+#include <openssl/fips.h>
+#include <openssl/fips_rand.h>
 #endif
 
-typedef struct MD2state_st
+#ifndef OPENSSL_NO_ENGINE
+#include <openssl/engine.h>
+#endif
+
+#if defined(OPENSSL_FIPS) && !defined(OPENSSL_NO_ENGINE)
+
+/* non-NULL if default_RAND_meth is ENGINE-provided */
+static ENGINE *funct_ref =NULL;
+
+int eng_RAND_set_rand_method(const RAND_METHOD *meth, const RAND_METHOD **pmeth)
 	{
-	unsigned int num;
-	unsigned char data[MD2_BLOCK];
-	MD2_INT cksm[MD2_BLOCK];
-	MD2_INT state[MD2_BLOCK];
-	} MD2_CTX;
+	if(funct_ref)
+		{
+		ENGINE_finish(funct_ref);
+		funct_ref = NULL;
+		}
+	*pmeth = meth;
+	return 1;
+	}
 
-const char *MD2_options(void);
-int MD2_Init(MD2_CTX *c);
-int MD2_Update(MD2_CTX *c, const unsigned char *data, size_t len);
-int MD2_Final(unsigned char *md, MD2_CTX *c);
-unsigned char *MD2(const unsigned char *d, size_t n,unsigned char *md);
-#ifdef  __cplusplus
-}
-#endif
+const RAND_METHOD *eng_RAND_get_rand_method(const RAND_METHOD **pmeth)
+	{
+	if (!*pmeth)
+		{
+		ENGINE *e = ENGINE_get_default_RAND();
+		if(e)
+			{
+			*pmeth = ENGINE_get_RAND(e);
+			if(!*pmeth)
+				{
+				ENGINE_finish(e);
+				e = NULL;
+				}
+			}
+		if(e)
+			funct_ref = e;
+		else
+			if(FIPS_mode())
+				*pmeth=FIPS_rand_method();
+			else
+			*pmeth = RAND_SSLeay();
+		}
+
+	if(FIPS_mode()
+		&& *pmeth != FIPS_rand_check())
+	    {
+	    RANDerr(RAND_F_ENG_RAND_GET_RAND_METHOD,RAND_R_NON_FIPS_METHOD);
+	    return 0;
+	    }
+
+	return *pmeth;
+	}
+
+int RAND_set_rand_engine(ENGINE *engine)
+	{
+	const RAND_METHOD *tmp_meth = NULL;
+	if(engine)
+		{
+		if(!ENGINE_init(engine))
+			return 0;
+		tmp_meth = ENGINE_get_RAND(engine);
+		if(!tmp_meth)
+			{
+			ENGINE_finish(engine);
+			return 0;
+			}
+		}
+	/* This function releases any prior ENGINE so call it first */
+	RAND_set_rand_method(tmp_meth);
+	funct_ref = engine;
+	return 1;
+	}
+
+void int_RAND_init_engine_callbacks(void)
+	{
+	static int done = 0;
+	if (done)
+		return;
+	int_RAND_set_callbacks(eng_RAND_set_rand_method,
+				 eng_RAND_get_rand_method);
+	done = 1;
+	}
 
 #endif
