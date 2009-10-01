@@ -253,6 +253,9 @@ extern "C" {
 #define SSL3_RT_MAX_EXTRA			(16384)
 #endif
 
+/* Default buffer length used for writen records.  Thus a generated record
+ * will contain plaintext no larger than this value. */
+#define SSL3_RT_DEFAULT_PLAIN_LENGTH	2048
 #define SSL3_RT_MAX_PLAIN_LENGTH		16384
 #ifdef OPENSSL_NO_COMP
 #define SSL3_RT_MAX_COMPRESSED_LENGTH	SSL3_RT_MAX_PLAIN_LENGTH
@@ -260,6 +263,12 @@ extern "C" {
 #define SSL3_RT_MAX_COMPRESSED_LENGTH	(1024+SSL3_RT_MAX_PLAIN_LENGTH)
 #endif
 #define SSL3_RT_MAX_ENCRYPTED_LENGTH	(1024+SSL3_RT_MAX_COMPRESSED_LENGTH)
+/* Extra space for empty fragment, headers, MAC, and padding. */
+#define SSL3_RT_DEFAULT_WRITE_OVERHEAD  256
+#define SSL3_RT_DEFAULT_PACKET_SIZE     4096 - SSL3_RT_DEFAULT_WRITE_OVERHEAD
+#if SSL3_RT_DEFAULT_PLAIN_LENGTH + SSL3_RT_DEFAULT_WRITE_OVERHEAD > SSL3_RT_DEFAULT_PACKET_SIZE
+#error "Insufficient space allocated for write buffers."
+#endif
 #define SSL3_RT_MAX_PACKET_SIZE		(SSL3_RT_MAX_ENCRYPTED_LENGTH+SSL3_RT_HEADER_LENGTH)
 #define SSL3_RT_MAX_DATA_SIZE			(1024*1024)
 
@@ -447,6 +456,7 @@ typedef struct ssl3_state_st
 /*client */
 /* extra state */
 #define SSL3_ST_CW_FLUSH		(0x100|SSL_ST_CONNECT)
+#define SSL3_ST_CUTTHROUGH_COMPLETE (0x101|SSL_ST_CONNECT)
 /* write to server */
 #define SSL3_ST_CW_CLNT_HELLO_A		(0x110|SSL_ST_CONNECT)
 #define SSL3_ST_CW_CLNT_HELLO_B		(0x111|SSL_ST_CONNECT)

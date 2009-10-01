@@ -277,6 +277,8 @@ static void sv_usage(void)
 	               "                 (default is sect163r2).\n");
 #endif
 	fprintf(stderr," -test_cipherlist - verifies the order of the ssl cipher lists\n");
+	fprintf(stderr," -c_small_records - enable client side use of small SSL record buffers\n");
+	fprintf(stderr," -s_small_records - enable server side use of small SSL record buffers\n");
 	}
 
 static void print_details(SSL *c_ssl, const char *prefix)
@@ -431,6 +433,9 @@ int main(int argc, char *argv[])
 #ifdef OPENSSL_FIPS
 	int fips_mode=0;
 #endif
+	int ssl_mode = 0;
+	int c_small_records=0;
+	int s_small_records=0;
 
 	verbose = 0;
 	debug = 0;
@@ -619,6 +624,14 @@ int main(int argc, char *argv[])
 			{
 			test_cipherlist = 1;
 			}
+		else if (strcmp(*argv, "-c_small_records") == 0)
+			{
+			c_small_records = 1;
+			}
+		else if (strcmp(*argv, "-s_small_records") == 0)
+			{
+			s_small_records = 1;
+			}
 		else
 			{
 			fprintf(stderr,"unknown option %s\n",*argv);
@@ -753,6 +766,21 @@ bad:
 		{
 		SSL_CTX_set_cipher_list(c_ctx,cipher);
 		SSL_CTX_set_cipher_list(s_ctx,cipher);
+		}
+
+	ssl_mode = 0;
+	if (c_small_records)
+		{
+		ssl_mode = SSL_CTX_get_mode(c_ctx);
+		ssl_mode |= SSL_MODE_SMALL_BUFFERS;
+		SSL_CTX_set_mode(c_ctx, ssl_mode);
+		}
+	ssl_mode = 0;
+	if (s_small_records)
+		{
+		ssl_mode = SSL_CTX_get_mode(s_ctx);
+		ssl_mode |= SSL_MODE_SMALL_BUFFERS;
+		SSL_CTX_set_mode(s_ctx, ssl_mode);
 		}
 
 #ifndef OPENSSL_NO_DH

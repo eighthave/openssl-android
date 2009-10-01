@@ -454,14 +454,20 @@ int ssl3_connect(SSL *s)
 				}
 			else
 				{
-#ifndef OPENSSL_NO_TLSEXT
-				/* Allow NewSessionTicket if ticket expected */
-				if (s->tlsext_ticket_expected)
-					s->s3->tmp.next_state=SSL3_ST_CR_SESSION_TICKET_A;
+				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128)
+					{
+					s->s3->tmp.next_state=SSL3_ST_CUTTHROUGH_COMPLETE;
+					}
 				else
+					{
+#ifndef OPENSSL_NO_TLSEXT
+					/* Allow NewSessionTicket if ticket expected */
+					if (s->tlsext_ticket_expected)
+						s->s3->tmp.next_state=SSL3_ST_CR_SESSION_TICKET_A;
+					else
 #endif
-				
-				s->s3->tmp.next_state=SSL3_ST_CR_FINISHED_A;
+						s->s3->tmp.next_state=SSL3_ST_CR_FINISHED_A;
+					}
 				}
 			s->init_num=0;
 			break;
@@ -511,6 +517,22 @@ int ssl3_connect(SSL *s)
 
 			s->state=s->s3->tmp.next_state;
 			break;
+
+		case SSL3_ST_CUTTHROUGH_COMPLETE:
+#ifndef OPENSSL_NO_TLSEXT
+			/* Allow NewSessionTicket if ticket expected */
+			if (s->tlsext_ticket_expected)
+				s->state=SSL3_ST_CR_SESSION_TICKET_A;
+			else
+#endif
+				s->state=SSL3_ST_CR_FINISHED_A;
+
+			/* Allow application writes to go through.  Note that SSL3_FLAGS_DELAY_CLIENT_FINISHED
+			 * is not supported on cutthrough connections (just for simplicity) */
+			ssl_free_wbio_buffer(s);
+			ret = 1;
+			goto end;
+			/* break; */
 
 		case SSL_ST_OK:
 			/* clean a few things up */

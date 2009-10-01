@@ -250,7 +250,8 @@ static int ssl3_get_record(SSL *s)
 		extra=SSL3_RT_MAX_EXTRA;
 	else
 		extra=0;
-	if (extra != s->s3->rbuf.len - SSL3_RT_MAX_PACKET_SIZE)
+	if (!(SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS) &&
+		extra != s->s3->rbuf.len - SSL3_RT_MAX_PACKET_SIZE)
 		{
 		/* actually likely an application error: SLS_OP_MICROSOFT_BIG_SSLV3_BUFFER
 		 * set after ssl3_setup_buffers() was done */
@@ -301,6 +302,21 @@ again:
 			al=SSL_AD_RECORD_OVERFLOW;
 			SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_PACKET_LENGTH_TOO_LONG);
 			goto f_err;
+			}
+
+		/* If we receive a valid record larger than the current buffer size,
+		 * allocate some memory for it.
+		 */
+		if (rr->length > s->s3->rbuf.len - SSL3_RT_HEADER_LENGTH)
+			{
+			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + SSL3_RT_HEADER_LENGTH))==NULL)
+				{
+				SSLerr(SSL_F_SSL3_GET_RECORD,ERR_R_INTERNAL_ERROR);
+				goto err;
+				}
+			s->s3->rbuf.buf=p;
+			s->s3->rbuf.len=rr->length + SSL3_RT_HEADER_LENGTH;
+			s->packet= &(s->s3->rbuf.buf[0]);
 			}
 
 		/* now s->rstate == SSL_ST_READ_BODY */
@@ -516,6 +532,7 @@ int ssl3_write_bytes(SSL *s, int type, const void *buf_, int len)
 	const unsigned char *buf=buf_;
 	unsigned int tot,n,nw;
 	int i;
+    unsigned int max_plain_length;
 
 	s->rwstate=SSL_NOTHING;
 	tot=s->s3->wnum;
@@ -535,8 +552,13 @@ int ssl3_write_bytes(SSL *s, int type, const void *buf_, int len)
 	n=(len-tot);
 	for (;;)
 		{
-		if (n > SSL3_RT_MAX_PLAIN_LENGTH)
-			nw=SSL3_RT_MAX_PLAIN_LENGTH;
+		if (!(SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS))
+			max_plain_length = SSL3_RT_MAX_PLAIN_LENGTH;
+		else
+			max_plain_length = SSL3_RT_DEFAULT_PLAIN_LENGTH;
+
+		if (n > max_plain_length)
+			nw = max_plain_length;
 		else
 			nw=n;
 
@@ -620,7 +642,9 @@ static int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 			if (prefix_len <= 0)
 				goto err;
 
-			if (s->s3->wbuf.len < (size_t)prefix_len + SSL3_RT_MAX_PACKET_SIZE)
+			if (s->s3->wbuf.len < (size_t)prefix_len +
+				((SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS) ? SSL3_RT_DEFAULT_PACKET_SIZE :
+					SSL3_RT_MAX_PACKET_SIZE))
 				{
 				/* insufficient space */
 				SSLerr(SSL_F_DO_SSL3_WRITE, ERR_R_INTERNAL_ERROR);

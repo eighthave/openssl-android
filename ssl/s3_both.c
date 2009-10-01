@@ -594,11 +594,18 @@ int ssl3_setup_buffers(SSL *s)
 
 	if (s->s3->rbuf.buf == NULL)
 		{
-		if (s->options & SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER)
-			extra=SSL3_RT_MAX_EXTRA;
+		if (SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS)
+			{
+			len = SSL3_RT_DEFAULT_PACKET_SIZE;
+			}
 		else
-			extra=0;
-		len = SSL3_RT_MAX_PACKET_SIZE + extra;
+			{
+			if (s->options & SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER)
+				extra=SSL3_RT_MAX_EXTRA;
+			else
+				extra=0;
+			len = SSL3_RT_MAX_PACKET_SIZE + extra;
+			}
 		if ((p=OPENSSL_malloc(len)) == NULL)
 			goto err;
 		s->s3->rbuf.buf = p;
@@ -607,8 +614,15 @@ int ssl3_setup_buffers(SSL *s)
 
 	if (s->s3->wbuf.buf == NULL)
 		{
-		len = SSL3_RT_MAX_PACKET_SIZE;
-		len += SSL3_RT_HEADER_LENGTH + 256; /* extra space for empty fragment */
+		if (SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS)
+			{
+			len = SSL3_RT_DEFAULT_PACKET_SIZE;
+			}
+		else
+			{
+			len = SSL3_RT_MAX_PACKET_SIZE;
+			}
+		len += SSL3_RT_DEFAULT_WRITE_OVERHEAD; /* extra space for empty fragment */
 		if ((p=OPENSSL_malloc(len)) == NULL)
 			goto err;
 		s->s3->wbuf.buf = p;

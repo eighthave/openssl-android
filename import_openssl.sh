@@ -57,15 +57,17 @@ rm -rf openssl-$OPENSSL_VERSION/     # remove stale files
 tar -zxf $OPENSSL_SOURCE
 cd openssl-$OPENSSL_VERSION
 
+# Apply appropriate patches
+for i in $OPENSSL_PATCHES; do
+  patch -p1 < ../patches/$i
+done
+
 ./Configure $CONFIGURE_ARGS
 
 # TODO(): Fixup android-config.mk
 
 cp -f LICENSE ../NOTICE
 touch ../MODULE_LICENSE_BSD_LIKE
-
-# Prune unnecessary sources
-rm -rf $UNNEEDED_SOURCES
 
 # Avoid checking in symlinks
 for i in `find include/openssl -type l`; do
@@ -76,15 +78,13 @@ for i in `find include/openssl -type l`; do
   fi
 done
 
-# Apply appropriate patches
-for i in $OPENSSL_PATCHES; do
-  patch -p1 < ../patches/$i
-done
-
 # Copy Makefiles
 cp ../patches/apps_Android.mk apps/Android.mk
 cp ../patches/crypto_Android.mk crypto/Android.mk
 cp ../patches/ssl_Android.mk ssl/Android.mk
+
+# Prune unnecessary sources
+rm -rf $UNNEEDED_SOURCES
 
 cd ..
 cp -af openssl-$OPENSSL_VERSION/include .
