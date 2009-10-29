@@ -12,6 +12,11 @@ else
 	LOCAL_SRC_FILES:= aes/aes_core.c
 endif
 
+ifeq ($(TARGET_SIMULATOR),true)
+	# Make valgrind happy.
+	LOCAL_CFLAGS += -DPURIFY
+endif
+
 LOCAL_SRC_FILES+= \
 	cryptlib.c \
 	mem.c \
