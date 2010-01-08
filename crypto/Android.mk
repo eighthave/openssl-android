@@ -432,8 +432,9 @@ include $(LOCAL_PATH)/../android-config.mk
 LOCAL_C_INCLUDES += \
 	external/openssl \
 	external/openssl/include \
+	external/zlib
 
-# LOCAL_SHARED_LIBRARIES += libengines
+LOCAL_SHARED_LIBRARIES += libz
 
 ifneq ($(TARGET_SIMULATOR),true)
 	LOCAL_SHARED_LIBRARIES += libdl
