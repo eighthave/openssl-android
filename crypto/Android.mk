@@ -23,6 +23,7 @@ LOCAL_SRC_FILES+= \
 	mem_clr.c \
 	mem_dbg.c \
 	cversion.c \
+	dyn_lck.c \
 	ex_data.c \
 	tmdiff.c \
 	cpt_err.c \
@@ -425,7 +426,7 @@ LOCAL_SRC_FILES+= \
 	ripemd/rmd_one.c \
 	evp/m_ripemd.c
 
-LOCAL_CFLAGS += -DNO_WINDOWS_BRAINDEATH 
+LOCAL_CFLAGS += -DNO_WINDOWS_BRAINDEATH
 
 include $(LOCAL_PATH)/../android-config.mk
 
