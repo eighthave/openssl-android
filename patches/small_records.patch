@@ -1,8 +1,7 @@
-diff -uarp openssl-0.9.8j.orig/ssl/d1_pkt.c openssl-0.9.8j/ssl/d1_pkt.c
---- openssl-0.9.8j.orig/ssl/d1_pkt.c	2008-10-12 23:43:06.000000000 -0700
-+++ openssl-0.9.8j/ssl/d1_pkt.c	2009-04-21 11:50:28.490911000 -0700
-@@ -561,6 +561,21 @@ again:
- 			goto f_err;
+--- openssl-0.9.8m.orig/ssl/d1_pkt.c	2009-09-27 07:04:33.000000000 -0700
++++ openssl-0.9.8m/ssl/d1_pkt.c	2010-03-08 16:01:43.000000000 -0800
+@@ -571,6 +571,21 @@ again:
+ 			goto again;
  			}
  
 +		/* If we receive a valid record larger than the current buffer size,
@@ -23,35 +22,7 @@ diff -uarp openssl-0.9.8j.orig/ssl/d1_pkt.c openssl-0.9.8j/ssl/d1_pkt.c
  		s->client_version = version;
  		/* now s->rstate == SSL_ST_READ_BODY */
  		}
-@@ -1226,6 +1241,7 @@ int dtls1_write_bytes(SSL *s, int type, 
- 	unsigned int tot,n,nw;
- 	int i;
- 	unsigned int mtu;
-+	unsigned int max_mtu;
- 
- 	s->rwstate=SSL_NOTHING;
- 	tot=s->s3->wnum;
-@@ -1240,8 +1256,17 @@ int dtls1_write_bytes(SSL *s, int type, 
- #endif
- 	mtu = s->d1->mtu;
- 
--	if (mtu > SSL3_RT_MAX_PLAIN_LENGTH)
--		mtu = SSL3_RT_MAX_PLAIN_LENGTH;
-+    if (!(SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS))
-+		{
-+		max_mtu = SSL3_RT_MAX_PLAIN_LENGTH;
-+		}
-+	else
-+		{
-+		max_mtu = SSL3_RT_DEFAULT_PLAIN_LENGTH;
-+		}
-+
-+	if (mtu > max_mtu)
-+		mtu = max_mtu;
- 
- 	if (n > mtu)
- 		nw=mtu;
-@@ -1327,7 +1352,9 @@ int do_dtls1_write(SSL *s, int type, con
+@@ -1355,7 +1370,9 @@ int do_dtls1_write(SSL *s, int type, con
  			if (prefix_len <= 0)
  				goto err;
  
@@ -62,10 +33,9 @@ diff -uarp openssl-0.9.8j.orig/ssl/d1_pkt.c openssl-0.9.8j/ssl/d1_pkt.c
  				{
  				/* insufficient space */
  				SSLerr(SSL_F_DO_DTLS1_WRITE, ERR_R_INTERNAL_ERROR);
-diff -uarp openssl-0.9.8j.orig/ssl/s23_srvr.c openssl-0.9.8j/ssl/s23_srvr.c
---- openssl-0.9.8j.orig/ssl/s23_srvr.c	2008-06-16 09:56:41.000000000 -0700
-+++ openssl-0.9.8j/ssl/s23_srvr.c	2009-04-21 11:28:58.540698000 -0700
-@@ -405,8 +405,13 @@ int ssl23_get_client_hello(SSL *s)
+--- openssl-0.9.8m.orig/ssl/s23_srvr.c	2010-02-16 06:19:42.000000000 -0800
++++ openssl-0.9.8m/ssl/s23_srvr.c	2010-03-08 16:01:43.000000000 -0800
+@@ -412,8 +412,13 @@ int ssl23_get_client_hello(SSL *s)
  		v[0] = p[3]; /* == SSL3_VERSION_MAJOR */
  		v[1] = p[4];
  
@@ -80,10 +50,17 @@ diff -uarp openssl-0.9.8j.orig/ssl/s23_srvr.c openssl-0.9.8j/ssl/s23_srvr.c
  			{
  			SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_RECORD_TOO_LARGE);
  			goto err;
-diff -uarp openssl-0.9.8j.orig/ssl/s3_both.c openssl-0.9.8j/ssl/s3_both.c
---- openssl-0.9.8j.orig/ssl/s3_both.c	2005-04-26 09:02:39.000000000 -0700
-+++ openssl-0.9.8j/ssl/s3_both.c	2009-04-21 11:28:58.545691000 -0700
-@@ -594,11 +594,18 @@ int ssl3_setup_buffers(SSL *s)
+--- openssl-0.9.8m.orig/ssl/s3_both.c	2009-11-08 09:07:42.000000000 -0800
++++ openssl-0.9.8m/ssl/s3_both.c	2010-03-08 16:18:03.000000000 -0800
+@@ -625,17 +625,24 @@ int ssl3_setup_buffers(SSL *s)
+ 	size_t len;
+ 
+ 	if (SSL_version(s) == DTLS1_VERSION || SSL_version(s) == DTLS1_BAD_VER)
+-		headerlen = DTLS1_RT_HEADER_LENGTH;
++		headerlen = DTLS1_RT_HEADER_LENGTH + 256; /* extra space for empty fragment */
+ 	else
+-		headerlen = SSL3_RT_HEADER_LENGTH;
++		headerlen = SSL3_RT_DEFAULT_WRITE_OVERHEAD;
  
  	if (s->s3->rbuf.buf == NULL)
  		{
@@ -106,12 +83,12 @@ diff -uarp openssl-0.9.8j.orig/ssl/s3_both.c openssl-0.9.8j/ssl/s3_both.c
  		if ((p=OPENSSL_malloc(len)) == NULL)
  			goto err;
  		s->s3->rbuf.buf = p;
-@@ -607,8 +614,15 @@ int ssl3_setup_buffers(SSL *s)
+@@ -644,8 +651,15 @@ int ssl3_setup_buffers(SSL *s)
  
  	if (s->s3->wbuf.buf == NULL)
  		{
 -		len = SSL3_RT_MAX_PACKET_SIZE;
--		len += SSL3_RT_HEADER_LENGTH + 256; /* extra space for empty fragment */
+-		len += headerlen + 256; /* extra space for empty fragment */
 +		if (SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS)
 +			{
 +			len = SSL3_RT_DEFAULT_PACKET_SIZE;
@@ -120,14 +97,13 @@ diff -uarp openssl-0.9.8j.orig/ssl/s3_both.c openssl-0.9.8j/ssl/s3_both.c
 +			{
 +			len = SSL3_RT_MAX_PACKET_SIZE;
 +			}
-+		len += SSL3_RT_DEFAULT_WRITE_OVERHEAD; /* extra space for empty fragment */
++		len += headerlen;
  		if ((p=OPENSSL_malloc(len)) == NULL)
  			goto err;
  		s->s3->wbuf.buf = p;
-diff -uarp openssl-0.9.8j.orig/ssl/s3_pkt.c openssl-0.9.8j/ssl/s3_pkt.c
---- openssl-0.9.8j.orig/ssl/s3_pkt.c	2008-10-10 03:41:32.000000000 -0700
-+++ openssl-0.9.8j/ssl/s3_pkt.c	2009-04-21 11:54:56.386910000 -0700
-@@ -250,7 +250,8 @@ static int ssl3_get_record(SSL *s)
+--- openssl-0.9.8m.orig/ssl/s3_pkt.c	2010-01-24 05:52:38.000000000 -0800
++++ openssl-0.9.8m/ssl/s3_pkt.c	2010-03-08 16:01:43.000000000 -0800
+@@ -259,7 +259,8 @@ static int ssl3_get_record(SSL *s)
  		extra=SSL3_RT_MAX_EXTRA;
  	else
  		extra=0;
@@ -137,7 +113,7 @@ diff -uarp openssl-0.9.8j.orig/ssl/s3_pkt.c openssl-0.9.8j/ssl/s3_pkt.c
  		{
  		/* actually likely an application error: SLS_OP_MICROSOFT_BIG_SSLV3_BUFFER
  		 * set after ssl3_setup_buffers() was done */
-@@ -303,6 +304,21 @@ again:
+@@ -312,6 +313,21 @@ again:
  			goto f_err;
  			}
  
@@ -159,7 +135,7 @@ diff -uarp openssl-0.9.8j.orig/ssl/s3_pkt.c openssl-0.9.8j/ssl/s3_pkt.c
  		/* now s->rstate == SSL_ST_READ_BODY */
  		}
  
-@@ -516,6 +532,7 @@ int ssl3_write_bytes(SSL *s, int type, c
+@@ -525,6 +541,7 @@ int ssl3_write_bytes(SSL *s, int type, c
  	const unsigned char *buf=buf_;
  	unsigned int tot,n,nw;
  	int i;
@@ -167,7 +143,7 @@ diff -uarp openssl-0.9.8j.orig/ssl/s3_pkt.c openssl-0.9.8j/ssl/s3_pkt.c
  
  	s->rwstate=SSL_NOTHING;
  	tot=s->s3->wnum;
-@@ -535,8 +552,13 @@ int ssl3_write_bytes(SSL *s, int type, c
+@@ -544,8 +561,13 @@ int ssl3_write_bytes(SSL *s, int type, c
  	n=(len-tot);
  	for (;;)
  		{
@@ -183,7 +159,7 @@ diff -uarp openssl-0.9.8j.orig/ssl/s3_pkt.c openssl-0.9.8j/ssl/s3_pkt.c
  		else
  			nw=n;
  
-@@ -620,7 +642,9 @@ static int do_ssl3_write(SSL *s, int typ
+@@ -629,7 +651,9 @@ static int do_ssl3_write(SSL *s, int typ
  			if (prefix_len <= 0)
  				goto err;
  
@@ -194,10 +170,9 @@ diff -uarp openssl-0.9.8j.orig/ssl/s3_pkt.c openssl-0.9.8j/ssl/s3_pkt.c
  				{
  				/* insufficient space */
  				SSLerr(SSL_F_DO_SSL3_WRITE, ERR_R_INTERNAL_ERROR);
-diff -uarp openssl-0.9.8j.orig/ssl/ssl.h openssl-0.9.8j/ssl/ssl.h
---- openssl-0.9.8j.orig/ssl/ssl.h	2009-04-21 11:28:38.824414000 -0700
-+++ openssl-0.9.8j/ssl/ssl.h	2009-04-21 11:28:58.560693000 -0700
-@@ -554,7 +554,9 @@ typedef struct ssl_session_st
+--- openssl-0.9.8m.orig/ssl/ssl.h	2010-01-06 09:59:40.000000000 -0800
++++ openssl-0.9.8m/ssl/ssl.h	2010-03-08 16:01:43.000000000 -0800
+@@ -560,7 +560,9 @@ typedef struct ssl_session_st
  #define SSL_MODE_AUTO_RETRY 0x00000004L
  /* Don't attempt to automatically build certificate chain */
  #define SSL_MODE_NO_AUTO_CHAIN 0x00000008L
@@ -208,10 +183,9 @@ diff -uarp openssl-0.9.8j.orig/ssl/ssl.h openssl-0.9.8j/ssl/ssl.h
  
  /* Note: SSL[_CTX]_set_{options,mode} use |= op on the previous value,
   * they cannot be used to clear bits. */
-diff -uarp openssl-0.9.8j.orig/ssl/ssl3.h openssl-0.9.8j/ssl/ssl3.h
---- openssl-0.9.8j.orig/ssl/ssl3.h	2009-04-21 11:28:38.842397000 -0700
-+++ openssl-0.9.8j/ssl/ssl3.h	2009-04-21 11:28:58.565695000 -0700
-@@ -253,6 +253,9 @@ extern "C" {
+--- openssl-0.9.8m.orig/ssl/ssl3.h	2010-01-06 09:59:41.000000000 -0800
++++ openssl-0.9.8m/ssl/ssl3.h	2010-03-08 16:01:43.000000000 -0800
+@@ -256,6 +256,9 @@ extern "C" {
  #define SSL3_RT_MAX_EXTRA			(16384)
  #endif
  
@@ -221,7 +195,7 @@ diff -uarp openssl-0.9.8j.orig/ssl/ssl3.h openssl-0.9.8j/ssl/ssl3.h
  #define SSL3_RT_MAX_PLAIN_LENGTH		16384
  #ifdef OPENSSL_NO_COMP
  #define SSL3_RT_MAX_COMPRESSED_LENGTH	SSL3_RT_MAX_PLAIN_LENGTH
-@@ -260,6 +263,12 @@ extern "C" {
+@@ -263,6 +266,12 @@ extern "C" {
  #define SSL3_RT_MAX_COMPRESSED_LENGTH	(1024+SSL3_RT_MAX_PLAIN_LENGTH)
  #endif
  #define SSL3_RT_MAX_ENCRYPTED_LENGTH	(1024+SSL3_RT_MAX_COMPRESSED_LENGTH)
@@ -234,9 +208,8 @@ diff -uarp openssl-0.9.8j.orig/ssl/ssl3.h openssl-0.9.8j/ssl/ssl3.h
  #define SSL3_RT_MAX_PACKET_SIZE		(SSL3_RT_MAX_ENCRYPTED_LENGTH+SSL3_RT_HEADER_LENGTH)
  #define SSL3_RT_MAX_DATA_SIZE			(1024*1024)
  
-diff -uarp openssl-0.9.8j.orig/ssl/ssltest.c openssl-0.9.8j/ssl/ssltest.c
---- openssl-0.9.8j.orig/ssl/ssltest.c	2009-01-07 02:48:23.000000000 -0800
-+++ openssl-0.9.8j/ssl/ssltest.c	2009-04-21 11:28:58.572707000 -0700
+--- openssl-0.9.8m.orig/ssl/ssltest.c	2009-01-07 02:48:23.000000000 -0800
++++ openssl-0.9.8m/ssl/ssltest.c	2010-03-08 16:01:43.000000000 -0800
 @@ -277,6 +277,8 @@ static void sv_usage(void)
  	               "                 (default is sect163r2).\n");
  #endif
@@ -293,9 +266,8 @@ diff -uarp openssl-0.9.8j.orig/ssl/ssltest.c openssl-0.9.8j/ssl/ssltest.c
  #ifndef OPENSSL_NO_DH
  	if (!no_dhe)
  		{
-diff -uarp openssl-0.9.8j.orig/test/testssl openssl-0.9.8j/test/testssl
---- openssl-0.9.8j.orig/test/testssl	2005-02-01 15:48:36.000000000 -0800
-+++ openssl-0.9.8j/test/testssl	2009-04-21 11:28:58.594684000 -0700
+--- openssl-0.9.8m.orig/test/testssl	2005-02-01 15:48:36.000000000 -0800
++++ openssl-0.9.8m/test/testssl	2010-03-08 16:01:43.000000000 -0800
 @@ -70,6 +70,16 @@ $ssltest -client_auth $CA $extra || exit
  echo test sslv2/sslv3 with both client and server authentication
  $ssltest -server_auth -client_auth $CA $extra || exit 1
