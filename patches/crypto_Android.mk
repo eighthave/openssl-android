@@ -12,12 +12,18 @@ else
 	LOCAL_SRC_FILES:= aes/aes_core.c
 endif
 
+ifeq ($(TARGET_SIMULATOR),true)
+	# Make valgrind happy.
+	LOCAL_CFLAGS += -DPURIFY
+endif
+
 LOCAL_SRC_FILES+= \
 	cryptlib.c \
 	mem.c \
 	mem_clr.c \
 	mem_dbg.c \
 	cversion.c \
+	dyn_lck.c \
 	ex_data.c \
 	tmdiff.c \
 	cpt_err.c \
@@ -420,15 +426,16 @@ LOCAL_SRC_FILES+= \
 	ripemd/rmd_one.c \
 	evp/m_ripemd.c
 
-LOCAL_CFLAGS += -DNO_WINDOWS_BRAINDEATH 
+LOCAL_CFLAGS += -DNO_WINDOWS_BRAINDEATH
 
 include $(LOCAL_PATH)/../android-config.mk
 
 LOCAL_C_INCLUDES += \
 	external/openssl \
 	external/openssl/include \
+	external/zlib
 
-# LOCAL_SHARED_LIBRARIES += libengines
+LOCAL_SHARED_LIBRARIES += libz
 
 ifneq ($(TARGET_SIMULATOR),true)
 	LOCAL_SHARED_LIBRARIES += libdl
