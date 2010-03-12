@@ -248,7 +248,6 @@ static void sc_usage(void)
 	BIO_printf(bio_err," -tlsextdebug      - hex dump of all TLS extensions received\n");
 	BIO_printf(bio_err," -status           - request certificate status from server\n");
 	BIO_printf(bio_err," -no_ticket        - disable use of RFC4507bis session tickets\n");
-	BIO_printf(bio_err," -cutthrough       - enable 1-RTT full-handshake for strong ciphers\n");
 #endif
 	BIO_printf(bio_err," -legacy_renegotiation - enable use of legacy renegotiation (dangerous)\n");
 	}
@@ -306,7 +305,6 @@ int MAIN(int argc, char **argv)
 	EVP_PKEY *key = NULL;
 	char *CApath=NULL,*CAfile=NULL,*cipher=NULL;
 	int reconnect=0,badop=0,verify=SSL_VERIFY_NONE,bugs=0;
-	int cutthrough=0;
 	int crlf=0;
 	int write_tty,read_tty,write_ssl,read_ssl,tty_on,ssl_pending;
 	SSL_CTX *ctx=NULL;
@@ -537,8 +535,6 @@ int MAIN(int argc, char **argv)
 		else if	(strcmp(*argv,"-no_ticket") == 0)
 			{ off|=SSL_OP_NO_TICKET; }
 #endif
-		else if (strcmp(*argv,"-cutthrough") == 0)
-			cutthrough=1;
 		else if (strcmp(*argv,"-serverpref") == 0)
 			off|=SSL_OP_CIPHER_SERVER_PREFERENCE;
 		else if (strcmp(*argv,"-legacy_renegotiation") == 0)
@@ -728,15 +724,6 @@ bad:
 	 * Setting read ahead solves this problem.
 	 */
 	if (sock_type == SOCK_DGRAM) SSL_CTX_set_read_ahead(ctx, 1);
-
-	/* Enable handshake cutthrough for client connections using
-	 * strong ciphers. */
-	if (cutthrough)
-		{
-		int ssl_mode = SSL_CTX_get_mode(ctx);
-		ssl_mode |= SSL_MODE_HANDSHAKE_CUTTHROUGH;
-		SSL_CTX_set_mode(ctx, ssl_mode);
-		}
 
 	if (state) SSL_CTX_set_info_callback(ctx,apps_ssl_info_callback);
 	if (cipher != NULL)
