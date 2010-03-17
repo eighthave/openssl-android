@@ -576,13 +576,16 @@ again:
 		 */
 		if (rr->length > s->s3->rbuf.len - DTLS1_RT_HEADER_LENGTH)
 			{
-			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + DTLS1_RT_HEADER_LENGTH))==NULL)
+			unsigned char *pp;
+			unsigned int newlen = rr->length + DTLS1_RT_HEADER_LENGTH;
+			if ((pp=OPENSSL_realloc(s->s3->rbuf.buf, newlen))==NULL)
 				{
 				SSLerr(SSL_F_DTLS1_GET_RECORD,ERR_R_MALLOC_FAILURE);
-				goto err;
+				return(-1);
 				}
-			s->s3->rbuf.buf=p;
-			s->s3->rbuf.len=rr->length + DTLS1_RT_HEADER_LENGTH;
+			p = pp + (p - s->s3->rbuf.buf);
+			s->s3->rbuf.buf=pp;
+			s->s3->rbuf.len=newlen;
 			s->packet= &(s->s3->rbuf.buf[0]);
 			}
 
@@ -1315,6 +1318,7 @@ int do_dtls1_write(SSL *s, int type, const unsigned char *buf, unsigned int len,
 	SSL3_BUFFER *wb;
 	SSL_SESSION *sess;
 	int bs;
+	unsigned int len_with_overhead = len + SSL3_RT_DEFAULT_WRITE_OVERHEAD;
 
 	/* first check if there is a SSL3_BUFFER still being written
 	 * out.  This will happen with non blocking IO */
@@ -1322,6 +1326,16 @@ int do_dtls1_write(SSL *s, int type, const unsigned char *buf, unsigned int len,
 		{
 		OPENSSL_assert(0); /* XDTLS:  want to see if we ever get here */
 		return(ssl3_write_pending(s,type,buf,len));
+		}
+
+	if (s->s3->wbuf.len < len_with_overhead)
+		{
+		if ((p=OPENSSL_realloc(s->s3->wbuf.buf, len_with_overhead)) == NULL) {
+			SSLerr(SSL_F_DO_DTLS1_WRITE,ERR_R_MALLOC_FAILURE);
+			goto err;
+		}
+		s->s3->wbuf.buf = p;
+		s->s3->wbuf.len = len_with_overhead;
 		}
 
 	/* If we have an alert to send, lets send it */
@@ -1370,9 +1384,7 @@ int do_dtls1_write(SSL *s, int type, const unsigned char *buf, unsigned int len,
 			if (prefix_len <= 0)
 				goto err;
 
-			if (s->s3->wbuf.len < (size_t)prefix_len +
-				((SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS) ? SSL3_RT_DEFAULT_PACKET_SIZE :
-					SSL3_RT_MAX_PACKET_SIZE))
+			if (s->s3->wbuf.len < (size_t)prefix_len + SSL3_RT_MAX_PACKET_SIZE)
 				{
 				/* insufficient space */
 				SSLerr(SSL_F_DO_DTLS1_WRITE, ERR_R_INTERNAL_ERROR);

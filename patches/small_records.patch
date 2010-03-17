@@ -1,6 +1,8 @@
---- openssl-0.9.8m.orig/ssl/d1_pkt.c	2009-09-27 07:04:33.000000000 -0700
-+++ openssl-0.9.8m/ssl/d1_pkt.c	2010-03-08 16:01:43.000000000 -0800
-@@ -571,6 +571,21 @@ again:
+diff --git openssl-0.9.8m/ssl/d1_pkt.c openssl-0.9.8m/ssl/d1_pkt.c
+index ca2d73f..2af5272 100644
+--- openssl-0.9.8m/ssl/d1_pkt.c
++++ openssl-0.9.8m/ssl/d1_pkt.c
+@@ -571,6 +571,24 @@ again:
  			goto again;
  			}
  
@@ -9,32 +11,51 @@
 +		 */
 +		if (rr->length > s->s3->rbuf.len - DTLS1_RT_HEADER_LENGTH)
 +			{
-+			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + DTLS1_RT_HEADER_LENGTH))==NULL)
++			unsigned char *pp;
++			unsigned int newlen = rr->length + DTLS1_RT_HEADER_LENGTH;
++			if ((pp=OPENSSL_realloc(s->s3->rbuf.buf, newlen))==NULL)
 +				{
 +				SSLerr(SSL_F_DTLS1_GET_RECORD,ERR_R_MALLOC_FAILURE);
-+				goto err;
++				return(-1);
 +				}
-+			s->s3->rbuf.buf=p;
-+			s->s3->rbuf.len=rr->length + DTLS1_RT_HEADER_LENGTH;
++			p = pp + (p - s->s3->rbuf.buf);
++			s->s3->rbuf.buf=pp;
++			s->s3->rbuf.len=newlen;
 +			s->packet= &(s->s3->rbuf.buf[0]);
 +			}
 +
  		s->client_version = version;
  		/* now s->rstate == SSL_ST_READ_BODY */
  		}
-@@ -1355,7 +1370,9 @@ int do_dtls1_write(SSL *s, int type, con
- 			if (prefix_len <= 0)
- 				goto err;
+@@ -1300,6 +1318,7 @@ int do_dtls1_write(SSL *s, int type, const unsigned char *buf, unsigned int len,
+ 	SSL3_BUFFER *wb;
+ 	SSL_SESSION *sess;
+ 	int bs;
++	unsigned int len_with_overhead = len + SSL3_RT_DEFAULT_WRITE_OVERHEAD;
  
--			if (s->s3->wbuf.len < (size_t)prefix_len + SSL3_RT_MAX_PACKET_SIZE)
-+			if (s->s3->wbuf.len < (size_t)prefix_len +
-+				((SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS) ? SSL3_RT_DEFAULT_PACKET_SIZE :
-+					SSL3_RT_MAX_PACKET_SIZE))
- 				{
- 				/* insufficient space */
- 				SSLerr(SSL_F_DO_DTLS1_WRITE, ERR_R_INTERNAL_ERROR);
---- openssl-0.9.8m.orig/ssl/s23_srvr.c	2010-02-16 06:19:42.000000000 -0800
-+++ openssl-0.9.8m/ssl/s23_srvr.c	2010-03-08 16:01:43.000000000 -0800
+ 	/* first check if there is a SSL3_BUFFER still being written
+ 	 * out.  This will happen with non blocking IO */
+@@ -1309,6 +1328,16 @@ int do_dtls1_write(SSL *s, int type, const unsigned char *buf, unsigned int len,
+ 		return(ssl3_write_pending(s,type,buf,len));
+ 		}
+ 
++	if (s->s3->wbuf.len < len_with_overhead)
++		{
++		if ((p=OPENSSL_realloc(s->s3->wbuf.buf, len_with_overhead)) == NULL) {
++			SSLerr(SSL_F_DO_DTLS1_WRITE,ERR_R_MALLOC_FAILURE);
++			goto err;
++		}
++		s->s3->wbuf.buf = p;
++		s->s3->wbuf.len = len_with_overhead;
++		}
++
+ 	/* If we have an alert to send, lets send it */
+ 	if (s->s3->alert_dispatch)
+ 		{
+diff --git openssl-0.9.8m/ssl/s23_srvr.c openssl-0.9.8m/ssl/s23_srvr.c
+index be05911..42f7de4 100644
+--- openssl-0.9.8m/ssl/s23_srvr.c
++++ openssl-0.9.8m/ssl/s23_srvr.c
 @@ -412,8 +412,13 @@ int ssl23_get_client_hello(SSL *s)
  		v[0] = p[3]; /* == SSL3_VERSION_MAJOR */
  		v[1] = p[4];
@@ -50,17 +71,11 @@
  			{
  			SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_RECORD_TOO_LARGE);
  			goto err;
---- openssl-0.9.8m.orig/ssl/s3_both.c	2009-11-08 09:07:42.000000000 -0800
-+++ openssl-0.9.8m/ssl/s3_both.c	2010-03-08 16:18:03.000000000 -0800
-@@ -625,17 +625,24 @@ int ssl3_setup_buffers(SSL *s)
- 	size_t len;
- 
- 	if (SSL_version(s) == DTLS1_VERSION || SSL_version(s) == DTLS1_BAD_VER)
--		headerlen = DTLS1_RT_HEADER_LENGTH;
-+		headerlen = DTLS1_RT_HEADER_LENGTH + 256; /* extra space for empty fragment */
- 	else
--		headerlen = SSL3_RT_HEADER_LENGTH;
-+		headerlen = SSL3_RT_DEFAULT_WRITE_OVERHEAD;
+diff --git openssl-0.9.8m/ssl/s3_both.c openssl-0.9.8m/ssl/s3_both.c
+index 7f46225..73f6002 100644
+--- openssl-0.9.8m/ssl/s3_both.c
++++ openssl-0.9.8m/ssl/s3_both.c
+@@ -631,11 +631,18 @@ int ssl3_setup_buffers(SSL *s)
  
  	if (s->s3->rbuf.buf == NULL)
  		{
@@ -83,7 +98,7 @@
  		if ((p=OPENSSL_malloc(len)) == NULL)
  			goto err;
  		s->s3->rbuf.buf = p;
-@@ -644,8 +651,15 @@ int ssl3_setup_buffers(SSL *s)
+@@ -644,8 +651,17 @@ int ssl3_setup_buffers(SSL *s)
  
  	if (s->s3->wbuf.buf == NULL)
  		{
@@ -97,12 +112,16 @@
 +			{
 +			len = SSL3_RT_MAX_PACKET_SIZE;
 +			}
-+		len += headerlen;
++		len += SSL3_RT_DEFAULT_WRITE_OVERHEAD; /* extra space for empty
++                                                          fragment, header, MAC
++                                                          and padding */
  		if ((p=OPENSSL_malloc(len)) == NULL)
  			goto err;
  		s->s3->wbuf.buf = p;
---- openssl-0.9.8m.orig/ssl/s3_pkt.c	2010-01-24 05:52:38.000000000 -0800
-+++ openssl-0.9.8m/ssl/s3_pkt.c	2010-03-08 16:01:43.000000000 -0800
+diff --git openssl-0.9.8m/ssl/s3_pkt.c openssl-0.9.8m/ssl/s3_pkt.c
+index a2ba574..6fe4004 100644
+--- openssl-0.9.8m/ssl/s3_pkt.c
++++ openssl-0.9.8m/ssl/s3_pkt.c
 @@ -259,7 +259,8 @@ static int ssl3_get_record(SSL *s)
  		extra=SSL3_RT_MAX_EXTRA;
  	else
@@ -135,7 +154,7 @@
  		/* now s->rstate == SSL_ST_READ_BODY */
  		}
  
-@@ -525,6 +541,7 @@ int ssl3_write_bytes(SSL *s, int type, c
+@@ -525,6 +541,7 @@ int ssl3_write_bytes(SSL *s, int type, const void *buf_, int len)
  	const unsigned char *buf=buf_;
  	unsigned int tot,n,nw;
  	int i;
@@ -143,7 +162,7 @@
  
  	s->rwstate=SSL_NOTHING;
  	tot=s->s3->wnum;
-@@ -544,8 +561,13 @@ int ssl3_write_bytes(SSL *s, int type, c
+@@ -544,8 +561,13 @@ int ssl3_write_bytes(SSL *s, int type, const void *buf_, int len)
  	n=(len-tot);
  	for (;;)
  		{
@@ -159,7 +178,7 @@
  		else
  			nw=n;
  
-@@ -629,7 +651,9 @@ static int do_ssl3_write(SSL *s, int typ
+@@ -629,7 +651,9 @@ static int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
  			if (prefix_len <= 0)
  				goto err;
  
@@ -170,8 +189,10 @@
  				{
  				/* insufficient space */
  				SSLerr(SSL_F_DO_SSL3_WRITE, ERR_R_INTERNAL_ERROR);
---- openssl-0.9.8m.orig/ssl/ssl.h	2010-01-06 09:59:40.000000000 -0800
-+++ openssl-0.9.8m/ssl/ssl.h	2010-03-08 16:01:43.000000000 -0800
+diff --git openssl-0.9.8m/ssl/ssl.h openssl-0.9.8m/ssl/ssl.h
+index 47ce1ea..16a90a8 100644
+--- openssl-0.9.8m/ssl/ssl.h
++++ openssl-0.9.8m/ssl/ssl.h
 @@ -560,7 +560,9 @@ typedef struct ssl_session_st
  #define SSL_MODE_AUTO_RETRY 0x00000004L
  /* Don't attempt to automatically build certificate chain */
@@ -183,8 +204,10 @@
  
  /* Note: SSL[_CTX]_set_{options,mode} use |= op on the previous value,
   * they cannot be used to clear bits. */
---- openssl-0.9.8m.orig/ssl/ssl3.h	2010-01-06 09:59:41.000000000 -0800
-+++ openssl-0.9.8m/ssl/ssl3.h	2010-03-08 16:01:43.000000000 -0800
+diff --git openssl-0.9.8m/ssl/ssl3.h openssl-0.9.8m/ssl/ssl3.h
+index 7e6afee..b5b8683 100644
+--- openssl-0.9.8m/ssl/ssl3.h
++++ openssl-0.9.8m/ssl/ssl3.h
 @@ -256,6 +256,9 @@ extern "C" {
  #define SSL3_RT_MAX_EXTRA			(16384)
  #endif
@@ -208,8 +231,10 @@
  #define SSL3_RT_MAX_PACKET_SIZE		(SSL3_RT_MAX_ENCRYPTED_LENGTH+SSL3_RT_HEADER_LENGTH)
  #define SSL3_RT_MAX_DATA_SIZE			(1024*1024)
  
---- openssl-0.9.8m.orig/ssl/ssltest.c	2009-01-07 02:48:23.000000000 -0800
-+++ openssl-0.9.8m/ssl/ssltest.c	2010-03-08 16:01:43.000000000 -0800
+diff --git openssl-0.9.8m/ssl/ssltest.c openssl-0.9.8m/ssl/ssltest.c
+index b09c542..09d3502 100644
+--- openssl-0.9.8m/ssl/ssltest.c
++++ openssl-0.9.8m/ssl/ssltest.c
 @@ -277,6 +277,8 @@ static void sv_usage(void)
  	               "                 (default is sect163r2).\n");
  #endif
@@ -266,9 +291,11 @@
  #ifndef OPENSSL_NO_DH
  	if (!no_dhe)
  		{
---- openssl-0.9.8m.orig/test/testssl	2005-02-01 15:48:36.000000000 -0800
-+++ openssl-0.9.8m/test/testssl	2010-03-08 16:01:43.000000000 -0800
-@@ -70,6 +70,16 @@ $ssltest -client_auth $CA $extra || exit
+diff --git openssl-0.9.8m/test/testssl openssl-0.9.8m/test/testssl
+index 8ac90ae..a9b2e24 100644
+--- openssl-0.9.8m/test/testssl
++++ openssl-0.9.8m/test/testssl
+@@ -70,6 +70,16 @@ $ssltest -client_auth $CA $extra || exit 1
  echo test sslv2/sslv3 with both client and server authentication
  $ssltest -server_auth -client_auth $CA $extra || exit 1
  

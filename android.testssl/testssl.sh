@@ -24,7 +24,7 @@
 set -e
 trap "echo Exiting on unexpected error." ERR
 
-device=/mnt/sdcard/android.testssl
+device=/sdcard/android.testssl
 
 digest='-sha1'
 reqcmd="adb shell /system/bin/openssl req"
@@ -42,6 +42,7 @@ Ucert="$device/certU.ss"
 
 echo
 echo "setting up"
+adb remount
 adb shell rm -r $device
 adb shell mkdir $device
 

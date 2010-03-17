@@ -108,6 +108,7 @@ function import() {
 
   # Apply appropriate patches
   for i in $OPENSSL_PATCHES; do
+    echo "Applying patch $i"
     patch -p1 < ../patches/$i || die "Could not apply patches/$i. Fix source and run: $0 regenerate patches/$i"
   done
 

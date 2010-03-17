@@ -625,9 +625,9 @@ int ssl3_setup_buffers(SSL *s)
 	size_t len;
 
 	if (SSL_version(s) == DTLS1_VERSION || SSL_version(s) == DTLS1_BAD_VER)
-		headerlen = DTLS1_RT_HEADER_LENGTH + 256; /* extra space for empty fragment */
+		headerlen = DTLS1_RT_HEADER_LENGTH;
 	else
-		headerlen = SSL3_RT_DEFAULT_WRITE_OVERHEAD;
+		headerlen = SSL3_RT_HEADER_LENGTH;
 
 	if (s->s3->rbuf.buf == NULL)
 		{
@@ -659,7 +659,9 @@ int ssl3_setup_buffers(SSL *s)
 			{
 			len = SSL3_RT_MAX_PACKET_SIZE;
 			}
-		len += headerlen;
+		len += SSL3_RT_DEFAULT_WRITE_OVERHEAD; /* extra space for empty
+                                                          fragment, header, MAC
+                                                          and padding */
 		if ((p=OPENSSL_malloc(len)) == NULL)
 			goto err;
 		s->s3->wbuf.buf = p;

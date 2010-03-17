@@ -292,9 +292,12 @@ again:
 			if (version != s->version)
 				{
 				SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_WRONG_VERSION_NUMBER);
-				/* Send back error using their
-				 * version number :-) */
-				s->version=version;
+				/* If the major versions match then we'll send
+				 * the error back using the peer's version.
+				 * Otherwise we risk setting s->version to an
+				 * internal version number. */
+				if ((s->version & 0xFF00) == (version & 0xFF00))
+					s->version = version;
 				al=SSL_AD_PROTOCOL_VERSION;
 				goto f_err;
 				}
