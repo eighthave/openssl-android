@@ -151,12 +151,12 @@ function import() {
     sed 's#../util/shlib_wrap.sh ../apps/openssl#adb shell /system/bin/openssl#' | \
     sed 's#adb shell /system/bin/openssl no-dh#[ `adb shell /system/bin/openssl no-dh` = no-dh ]#' | \
     sed 's#adb shell /system/bin/openssl no-rsa#[ `adb shell /system/bin/openssl no-rsa` = no-dh ]#' | \
-    sed 's#../apps/server2.pem#/mnt/sdcard/android.testssl/server2.pem#' | \
+    sed 's#../apps/server2.pem#/sdcard/android.testssl/server2.pem#' | \
     cat > \
     android.testssl/testssl
   chmod +x android.testssl/testssl
-  cat test/Uss.cnf | sed 's#./.rnd#/mnt/sdcard/android.testssl/.rnd#' >> android.testssl/Uss.cnf
-  cat test/CAss.cnf | sed 's#./.rnd#/mnt/sdcard/android.testssl/.rnd#' >> android.testssl/CAss.cnf
+  cat test/Uss.cnf | sed 's#./.rnd#/sdcard/android.testssl/.rnd#' >> android.testssl/Uss.cnf
+  cat test/CAss.cnf | sed 's#./.rnd#/sdcard/android.testssl/.rnd#' >> android.testssl/CAss.cnf
   cp apps/server2.pem android.testssl/
   cp ../patches/testssl.sh android.testssl/
 

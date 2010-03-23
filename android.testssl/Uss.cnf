@@ -3,7 +3,7 @@
 # This is mostly being used for generation of certificate requests.
 #
 
-RANDFILE		= /mnt/sdcard/android.testssl/.rnd
+RANDFILE		= /sdcard/android.testssl/.rnd
 
 ####################################################################
 [ req ]

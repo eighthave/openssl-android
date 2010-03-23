@@ -142,13 +142,13 @@ if [ `adb shell /system/bin/openssl no-rsa` = no-dh ]; then
   echo skipping RSA tests
 else
   echo test tls1 with 1024bit RSA, no DHE, multiple handshakes
-  adb shell /system/bin/ssltest -v -bio_pair -tls1 -cert /mnt/sdcard/android.testssl/server2.pem -no_dhe -num 10 -f -time $extra || exit 1
+  adb shell /system/bin/ssltest -v -bio_pair -tls1 -cert /sdcard/android.testssl/server2.pem -no_dhe -num 10 -f -time $extra || exit 1
 
   if [ `adb shell /system/bin/openssl no-dh` = no-dh ]; then
     echo skipping RSA+DHE tests
   else
     echo test tls1 with 1024bit RSA, 1024bit DHE, multiple handshakes
-    adb shell /system/bin/ssltest -v -bio_pair -tls1 -cert /mnt/sdcard/android.testssl/server2.pem -dhe1024dsa -num 10 -f -time $extra || exit 1
+    adb shell /system/bin/ssltest -v -bio_pair -tls1 -cert /sdcard/android.testssl/server2.pem -dhe1024dsa -num 10 -f -time $extra || exit 1
   fi
 fi
 
