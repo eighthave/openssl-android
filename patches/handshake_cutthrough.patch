@@ -45,21 +45,28 @@ diff -uarp openssl-0.9.8k.orig/apps/s_client.c openssl-0.9.8k/apps/s_client.c
 diff -uarp openssl-0.9.8k.orig/ssl/s3_clnt.c openssl-0.9.8k/ssl/s3_clnt.c
 --- openssl-0.9.8k.orig/ssl/s3_clnt.c	2009-02-14 13:50:14.000000000 -0800
 +++ openssl-0.9.8k/ssl/s3_clnt.c	2009-10-05 17:00:24.000000000 -0700
-@@ -186,6 +186,13 @@ int ssl3_connect(SSL *s)
+@@ -186,6 +186,20 @@ int ssl3_connect(SSL *s)
  	
  	s->in_handshake++;
  	if (!SSL_in_init(s) || SSL_in_before(s)) SSL_clear(s); 
 +	if (SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH)
 +		{
-+		/* Reneotiation complicates the state machine */
++		/* Renegotiation complicates the state machine */
 +		s->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
++#if 0	/* Send app data in separate packet, otherwise, some particular site
++	 * (only one site so far) closes the socket.
++	 * Note: there is a very small chance that two TCP packets
++	 * could be arriving at server combined into a single TCP packet,
++	 * then trigger that site to break. We haven't encounter that though.
++	 */
 +		/* Send app data along with CCS/Finished */
 +		s->s3->flags |= SSL3_FLAGS_DELAY_CLIENT_FINISHED;
 +		}
++#endif
  
  	for (;;)
  		{
-@@ -454,14 +461,29 @@ int ssl3_connect(SSL *s)
+@@ -454,14 +468,29 @@ int ssl3_connect(SSL *s)
  				}
  			else
  				{
@@ -95,7 +102,7 @@ diff -uarp openssl-0.9.8k.orig/ssl/s3_clnt.c openssl-0.9.8k/ssl/s3_clnt.c
  				}
  			s->init_num=0;
  			break;
-@@ -512,6 +534,24 @@ int ssl3_connect(SSL *s)
+@@ -512,6 +541,24 @@ int ssl3_connect(SSL *s)
  			s->state=s->s3->tmp.next_state;
  			break;
  
@@ -134,8 +141,8 @@ diff -uarp openssl-0.9.8k.orig/ssl/s3_lib.c openssl-0.9.8k/ssl/s3_lib.c
 +	if ((s->s3->flags & SSL3_FLAGS_POP_BUFFER) && (s->wbio == s->bbio))
 +		{
 +		/* Deal with an application that calls SSL_read() when handshake data
-+ 		 * is yet to be written.
-+ 		 */
++		 * is yet to be written.
++		 */
 +		if (BIO_wpending(s->wbio) > 0)
 +			{
 +			s->rwstate=SSL_WRITING;
@@ -183,7 +190,7 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssl3.h openssl-0.9.8k/ssl/ssl3.h
  /*client */
  /* extra state */
  #define SSL3_ST_CW_FLUSH		(0x100|SSL_ST_CONNECT)
-+#define SSL3_ST_CUTTHROUGH_COMPLETE (0x101|SSL_ST_CONNECT)
++#define SSL3_ST_CUTTHROUGH_COMPLETE	(0x101|SSL_ST_CONNECT)
  /* write to server */
  #define SSL3_ST_CW_CLNT_HELLO_A		(0x110|SSL_ST_CONNECT)
  #define SSL3_ST_CW_CLNT_HELLO_B		(0x111|SSL_ST_CONNECT)
@@ -217,7 +224,7 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssltest.c openssl-0.9.8k/ssl/ssltest.c
  	fprintf(stderr," -test_cipherlist - verifies the order of the ssl cipher lists\n");
  	fprintf(stderr," -c_small_records - enable client side use of small SSL record buffers\n");
  	fprintf(stderr," -s_small_records - enable server side use of small SSL record buffers\n");
-+	fprintf(stderr," -cutthrough       - enable 1-RTT full-handshake for strong ciphers\n");
++	fprintf(stderr," -cutthrough      - enable 1-RTT full-handshake for strong ciphers\n");
  	}
  
  static void print_details(SSL *c_ssl, const char *prefix)
