@@ -34,6 +34,7 @@ full-handshakes.
 
 bad_version.patch
 
+Addresses CVE-2010-0740 http://www.openssl.org/news/secadv_20100324.txt
 A peer can send us a mal-formed packet and we'll copy its 'version'
 number in order to send an error back. However, if the version number
 is an internal OpenSSL value (like DTLS1_VERSION) then we'll assume

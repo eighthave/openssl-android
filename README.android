@@ -3,6 +3,8 @@ OpenSSL on the Android platform.
 
 The code in this directory is based on $OPENSSL_VERSION in the file
 openssl.config, and some backported OpenSSL code in crypto/0.9.9-dev.
+See patches/README for more information on how the code differs from
+$OPENSSL_VERSION.
 
 Porting New Versions of OpenSSL.
 --
