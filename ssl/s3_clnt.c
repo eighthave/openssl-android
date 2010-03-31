@@ -194,8 +194,8 @@ int ssl3_connect(SSL *s)
 	 */
 		/* Send app data along with CCS/Finished */
 		s->s3->flags |= SSL3_FLAGS_DELAY_CLIENT_FINISHED;
-		}
 #endif
+		}
 
 	for (;;)
 		{

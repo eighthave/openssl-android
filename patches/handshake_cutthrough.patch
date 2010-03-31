@@ -61,8 +61,8 @@ diff -uarp openssl-0.9.8k.orig/ssl/s3_clnt.c openssl-0.9.8k/ssl/s3_clnt.c
 +	 */
 +		/* Send app data along with CCS/Finished */
 +		s->s3->flags |= SSL3_FLAGS_DELAY_CLIENT_FINISHED;
-+		}
 +#endif
++		}
  
  	for (;;)
  		{
