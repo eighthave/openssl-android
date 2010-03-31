@@ -272,6 +272,15 @@ LOCAL_SRC_FILES+= \
 	objects/obj_dat.c \
 	objects/obj_lib.c \
 	objects/obj_err.c \
+	ocsp/ocsp_asn.c \
+	ocsp/ocsp_cl.c \
+	ocsp/ocsp_err.c \
+	ocsp/ocsp_ext.c \
+	ocsp/ocsp_ht.c \
+	ocsp/ocsp_lib.c \
+	ocsp/ocsp_prn.c \
+	ocsp/ocsp_srv.c \
+	ocsp/ocsp_vfy.c \
 	pem/pem_sign.c \
 	pem/pem_seal.c \
 	pem/pem_info.c \
@@ -394,6 +403,7 @@ LOCAL_SRC_FILES+= \
 	x509v3/v3_purp.c \
 	x509v3/v3_info.c \
 	x509v3/v3_akeya.c \
+	x509v3/v3_ocsp.c \
 	x509v3/v3_pcia.c \
 	x509v3/v3_pci.c \
 	x509v3/v3_pmaps.c \
