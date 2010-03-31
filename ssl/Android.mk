@@ -31,6 +31,7 @@ LOCAL_SRC_FILES:= \
 	t1_clnt.c \
 	t1_lib.c \
 	t1_enc.c \
+	t1_reneg.c \
 	ssl_lib.c \
 	ssl_err2.c \
 	ssl_cert.c \

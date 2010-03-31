@@ -8,11 +8,6 @@ arm-asm.patch.patch:
 ARM assembly routines (AES, BN, SHA1, SHA256, SHA512)
 
 
-openssl_defs.patch:
-
-Fixup missing #defines.
-
-
 small_records.patch:
 
 Reduce OpenSSL memory consumption.
@@ -31,6 +26,7 @@ Enables SSL3+ clients to send application data immediately following the
 Finished message even when negotiating full-handshakes.  With this patch,
 clients can negotiate SSL connections in 1-RTT even when performing
 full-handshakes.
+
 
 bad_version.patch
 
