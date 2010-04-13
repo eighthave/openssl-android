@@ -50,6 +50,7 @@ The following steps are recommended for porting new OpenSSL versions.
 7) Run tests to make sure things are working:
 
      (cd android.testssl/ && ./testssl.sh)
+     adb shell run-core-tests tests.xnet.AllTests
 
 8) Do a full build before checking in:
 
