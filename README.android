@@ -51,6 +51,8 @@ The following steps are recommended for porting new OpenSSL versions.
 
      (cd android.testssl/ && ./testssl.sh)
      adb shell run-core-tests tests.xnet.AllTests
+     adb shell run-core-tests org.apache.harmony.math.tests.java.math.AllTests
+     adb shell run-core-tests tests.api.java.math.BigIntegerTest
 
 8) Do a full build before checking in:
 

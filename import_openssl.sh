@@ -144,6 +144,13 @@ function import() {
   cp ../patches/crypto_Android.mk crypto/Android.mk
   cp ../patches/ssl_Android.mk ssl/Android.mk
 
+  # Generate asm
+  perl crypto/aes/asm/aes-armv4.pl         > crypto/aes/asm/aes-armv4.s
+  perl crypto/bn/asm/armv4-mont.pl         > crypto/bn/asm/armv4-mont.s
+  perl crypto/sha/asm/sha1-armv4-large.pl  > crypto/sha/asm/sha1-armv4-large.s
+  perl crypto/sha/asm/sha256-armv4.pl      > crypto/sha/asm/sha256-armv4.s
+  perl crypto/sha/asm/sha512-armv4.pl      > crypto/sha/asm/sha512-armv4.s
+
   # Setup android.testssl directory
   mkdir android.testssl
   cat test/testssl | \
@@ -164,6 +171,7 @@ function import() {
   rm -rf $UNNEEDED_SOURCES
 
   cd ..
+  rm -rf include/
   cp -af openssl-$OPENSSL_VERSION/include .
   rm -rf apps/
   mv openssl-$OPENSSL_VERSION/apps .
