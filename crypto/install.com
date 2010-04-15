@@ -41,16 +41,17 @@ $	IF F$PARSE("WRK_SSLINCLUDE:") .EQS. "" THEN -
 	   CREATE/DIR/LOG WRK_SSLINCLUDE:
 $
 $	SDIRS := ,-
+		 _'ARCH',-
 		 OBJECTS,-
-		 MD2,MD4,MD5,SHA,MDC2,HMAC,RIPEMD,-
+		 MD2,MD4,MD5,SHA,MDC2,HMAC,RIPEMD,WHRLPOOL,-
 		 DES,AES,RC2,RC4,RC5,IDEA,BF,CAST,CAMELLIA,SEED,-
 		 BN,EC,RSA,DSA,ECDSA,DH,ECDH,DSO,ENGINE,-
 		 BUFFER,BIO,STACK,LHASH,RAND,ERR,-
 		 EVP,ASN1,PEM,X509,X509V3,CONF,TXT_DB,PKCS7,PKCS12,COMP,OCSP,-
 		 UI,KRB5,-
-		 STORE,PQUEUE,JPAKE
-$	EXHEADER_ := crypto.h,tmdiff.h,opensslv.h,opensslconf.h,ebcdic.h,-
-		symhacks.h,ossl_typ.h
+		 STORE,CMS,PQUEUE,TS,JPAKE
+$	EXHEADER_ := crypto.h,opensslv.h,ebcdic.h,symhacks.h,ossl_typ.h
+$	EXHEADER__'ARCH' := opensslconf.h
 $	EXHEADER_OBJECTS := objects.h,obj_mac.h
 $	EXHEADER_MD2 := md2.h
 $	EXHEADER_MD4 := md4.h
@@ -59,6 +60,7 @@ $	EXHEADER_SHA := sha.h
 $	EXHEADER_MDC2 := mdc2.h
 $	EXHEADER_HMAC := hmac.h
 $	EXHEADER_RIPEMD := ripemd.h
+$	EXHEADER_WHRLPOOL := whrlpool.h
 $	EXHEADER_DES := des.h,des_old.h
 $	EXHEADER_AES := aes.h
 $	EXHEADER_RC2 := rc2.h
@@ -69,6 +71,7 @@ $	EXHEADER_BF := blowfish.h
 $	EXHEADER_CAST := cast.h
 $	EXHEADER_CAMELLIA := camellia.h
 $	EXHEADER_SEED := seed.h
+$	EXHEADER_MODES := modes.h
 $	EXHEADER_BN := bn.h
 $	EXHEADER_EC := ec.h
 $	EXHEADER_RSA := rsa.h
@@ -99,7 +102,9 @@ $	EXHEADER_UI := ui.h,ui_compat.h
 $	EXHEADER_KRB5 := krb5_asn.h
 $!	EXHEADER_STORE := store.h,str_compat.h
 $	EXHEADER_STORE := store.h
-$	EXHEADER_PQUEUE := pqueue.h,pq_compat.h
+$	EXHEADER_CMS := cms.h
+$	EXHEADER_PQUEUE := pqueue.h
+$	EXHEADER_TS := ts.h
 $	EXHEADER_JPAKE := jpake.h
 $	LIBS := LIBCRYPTO
 $
@@ -115,7 +120,12 @@ $	IF D .EQS. ""
 $	THEN
 $	  COPY 'tmp' WRK_SSLINCLUDE: /LOG
 $	ELSE
-$	  COPY [.'D']'tmp' WRK_SSLINCLUDE: /LOG
+$	  IF D .EQS. "_''ARCH'"
+$	  THEN
+$	    COPY [-.'ARCH'.CRYPTO]'tmp' WRK_SSLINCLUDE: /LOG
+$	  ELSE
+$	    COPY [.'D']'tmp' WRK_SSLINCLUDE: /LOG
+$	  ENDIF
 $	ENDIF
 $	SET FILE/PROT=WORLD:RE WRK_SSLINCLUDE:'tmp'
 $	GOTO LOOP_SDIRS
