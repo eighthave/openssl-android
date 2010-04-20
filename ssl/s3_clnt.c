@@ -182,6 +182,20 @@ int ssl3_connect(SSL *s)
 	
 	s->in_handshake++;
 	if (!SSL_in_init(s) || SSL_in_before(s)) SSL_clear(s); 
+	if (SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH)
+		{
+		/* Renegotiation complicates the state machine */
+		s->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
+#if 0	/* Send app data in separate packet, otherwise, some particular site
+	 * (only one site so far) closes the socket.
+	 * Note: there is a very small chance that two TCP packets
+	 * could be arriving at server combined into a single TCP packet,
+	 * then trigger that site to break. We haven't encounter that though.
+	 */
+		/* Send app data along with CCS/Finished */
+		s->s3->flags |= SSL3_FLAGS_DELAY_CLIENT_FINISHED;
+#endif
+		}
 
 	for (;;)
 		{
@@ -450,14 +464,29 @@ int ssl3_connect(SSL *s)
 				}
 			else
 				{
-#ifndef OPENSSL_NO_TLSEXT
-				/* Allow NewSessionTicket if ticket expected */
-				if (s->tlsext_ticket_expected)
-					s->s3->tmp.next_state=SSL3_ST_CR_SESSION_TICKET_A;
+				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128)
+					{
+					if (s->s3->flags & SSL3_FLAGS_DELAY_CLIENT_FINISHED)
+						{
+						s->state=SSL3_ST_CUTTHROUGH_COMPLETE;
+						s->s3->flags|=SSL3_FLAGS_POP_BUFFER;
+						s->s3->delay_buf_pop_ret=0;
+						}
+					else
+						{
+						s->s3->tmp.next_state=SSL3_ST_CUTTHROUGH_COMPLETE;
+						}
+					}
 				else
+					{
+#ifndef OPENSSL_NO_TLSEXT
+					/* Allow NewSessionTicket if ticket expected */
+					if (s->tlsext_ticket_expected)
+						s->s3->tmp.next_state=SSL3_ST_CR_SESSION_TICKET_A;
+					else
 #endif
-				
-				s->s3->tmp.next_state=SSL3_ST_CR_FINISHED_A;
+						s->s3->tmp.next_state=SSL3_ST_CR_FINISHED_A;
+					}
 				}
 			s->init_num=0;
 			break;
@@ -504,6 +533,24 @@ int ssl3_connect(SSL *s)
 			s->rwstate=SSL_NOTHING;
 			s->state=s->s3->tmp.next_state;
 			break;
+
+		case SSL3_ST_CUTTHROUGH_COMPLETE:
+#ifndef OPENSSL_NO_TLSEXT
+			/* Allow NewSessionTicket if ticket expected */
+			if (s->tlsext_ticket_expected)
+				s->state=SSL3_ST_CR_SESSION_TICKET_A;
+			else
+#endif
+				s->state=SSL3_ST_CR_FINISHED_A;
+
+			/* SSL_write() will take care of flushing buffered data if
+			 * DELAY_CLIENT_FINISHED is set.
+			 */
+			if (!(s->s3->flags & SSL3_FLAGS_DELAY_CLIENT_FINISHED))
+				ssl_free_wbio_buffer(s);
+			ret = 1;
+			goto end;
+			/* break; */
 
 		case SSL_ST_OK:
 			/* clean a few things up */
