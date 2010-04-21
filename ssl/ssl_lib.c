@@ -2752,7 +2752,17 @@ void SSL_set_msg_callback(SSL *ssl, void (*cb)(int write_p, int version, int con
 	SSL_callback_ctrl(ssl, SSL_CTRL_SET_MSG_CALLBACK, (void (*)(void))cb);
 	}
 
-
+int SSL_cutthrough_complete(const SSL *s)
+	{
+	return (!s->server &&                 /* cutthrough only applies to clients */
+		!s->hit &&                        /* full-handshake */
+		s->version >= SSL3_VERSION &&
+		s->s3->in_read_app_data == 0 &&   /* cutthrough only applies to write() */
+		(SSL_get_mode((SSL*)s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) &&  /* cutthrough enabled */
+		SSL_get_cipher_bits(s, NULL) >= 128 &&                      /* strong cipher choosen */
+		(s->state == SSL3_ST_CR_SESSION_TICKET_A ||                 /* ready to write app-data*/
+			s->state == SSL3_ST_CR_FINISHED_A));
+	}
 
 #if defined(_WINDLL) && defined(OPENSSL_SYS_WIN16)
 #include "../crypto/bio/bss_file.c"
