@@ -1,6 +1,6 @@
-diff -uarp openssl-0.9.8k.orig/apps/s_client.c openssl-0.9.8k/apps/s_client.c
---- openssl-0.9.8k.orig/apps/s_client.c	2008-12-20 09:04:08.000000000 -0800
-+++ openssl-0.9.8k/apps/s_client.c	2009-10-05 17:00:24.000000000 -0700
+diff -uarp openssl-1.0.0.orig/apps/s_client.c openssl-1.0.0/apps/s_client.c
+--- openssl-1.0.0.orig/apps/s_client.c	2009-12-16 15:28:28.000000000 -0500
++++ openssl-1.0.0/apps/s_client.c	2010-04-21 14:39:49.000000000 -0400
 @@ -248,6 +248,7 @@ static void sc_usage(void)
  	BIO_printf(bio_err," -tlsextdebug      - hex dump of all TLS extensions received\n");
  	BIO_printf(bio_err," -status           - request certificate status from server\n");
@@ -42,9 +42,9 @@ diff -uarp openssl-0.9.8k.orig/apps/s_client.c openssl-0.9.8k/apps/s_client.c
  	if (state) SSL_CTX_set_info_callback(ctx,apps_ssl_info_callback);
  	if (cipher != NULL)
  		if(!SSL_CTX_set_cipher_list(ctx,cipher)) {
-diff -uarp openssl-0.9.8k.orig/ssl/s3_clnt.c openssl-0.9.8k/ssl/s3_clnt.c
---- openssl-0.9.8k.orig/ssl/s3_clnt.c	2009-02-14 13:50:14.000000000 -0800
-+++ openssl-0.9.8k/ssl/s3_clnt.c	2009-10-05 17:00:24.000000000 -0700
+diff -uarp openssl-1.0.0.orig/ssl/s3_clnt.c openssl-1.0.0/ssl/s3_clnt.c
+--- openssl-1.0.0.orig/ssl/s3_clnt.c	2010-02-27 19:24:24.000000000 -0500
++++ openssl-1.0.0/ssl/s3_clnt.c	2010-04-21 14:39:49.000000000 -0400
 @@ -186,6 +186,20 @@ int ssl3_connect(SSL *s)
  	
  	s->in_handshake++;
@@ -127,9 +127,9 @@ diff -uarp openssl-0.9.8k.orig/ssl/s3_clnt.c openssl-0.9.8k/ssl/s3_clnt.c
  		case SSL_ST_OK:
  			/* clean a few things up */
  			ssl3_cleanup_key_block(s);
-diff -uarp openssl-0.9.8k.orig/ssl/s3_lib.c openssl-0.9.8k/ssl/s3_lib.c
---- openssl-0.9.8k.orig/ssl/s3_lib.c	2008-06-16 09:56:41.000000000 -0700
-+++ openssl-0.9.8k/ssl/s3_lib.c	2009-10-05 17:00:24.000000000 -0700
+diff -uarp openssl-1.0.0.orig/ssl/s3_lib.c openssl-1.0.0/ssl/s3_lib.c
+-- openssl-1.0.0.orig/ssl/s3_lib.c     2009-10-16 11:24:19.000000000 -0400
++++ openssl-1.0.0/ssl/s3_lib.c  2010-04-21 14:39:49.000000000 -0400
 @@ -2551,9 +2551,22 @@ int ssl3_write(SSL *s, const void *buf, 
  
  static int ssl3_read_internal(SSL *s, void *buf, int len, int peek)
@@ -154,18 +154,18 @@ diff -uarp openssl-0.9.8k.orig/ssl/s3_lib.c openssl-0.9.8k/ssl/s3_lib.c
  	if (s->s3->renegotiate) ssl3_renegotiate_check(s);
  	s->s3->in_read_app_data=1;
  	ret=s->method->ssl_read_bytes(s,SSL3_RT_APPLICATION_DATA,buf,len,peek);
-diff -uarp openssl-0.9.8k.orig/ssl/ssl.h openssl-0.9.8k/ssl/ssl.h
---- openssl-0.9.8k.orig/ssl/ssl.h	2009-10-05 17:00:39.000000000 -0700
-+++ openssl-0.9.8k/ssl/ssl.h	2009-10-05 17:00:24.000000000 -0700
-@@ -557,6 +557,10 @@ typedef struct ssl_session_st
+diff -uarp openssl-1.0.0.orig/ssl/ssl.h openssl-1.0.0/ssl/ssl.h
+--- openssl-1.0.0.orig/ssl/ssl.h	2010-01-06 12:37:38.000000000 -0500
++++ openssl-1.0.0/ssl/ssl.h	2010-04-21 16:57:49.000000000 -0400
+@@ -605,6 +605,10 @@ typedef struct ssl_session_st
  /* Use small read and write buffers: (a) lazy allocate read buffers for
   * large incoming records, and (b) limit the size of outgoing records. */
- #define SSL_MODE_SMALL_BUFFERS 0x00000010L
+ #define SSL_MODE_SMALL_BUFFERS 0x00000020L
 +/* When set, clients may send application data before receipt of CCS
 + * and Finished.  This mode enables full-handshakes to 'complete' in
 + * one RTT. */
-+#define SSL_MODE_HANDSHAKE_CUTTHROUGH 0x00000020L
- 
++#define SSL_MODE_HANDSHAKE_CUTTHROUGH 0x00000040L
+
  /* Note: SSL[_CTX]_set_{options,mode} use |= op on the previous value,
   * they cannot be used to clear bits. */
 @@ -1097,10 +1101,12 @@ extern "C" {
@@ -182,10 +182,10 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssl.h openssl-0.9.8k/ssl/ssl.h
  
  /* The following 2 states are kept in ssl->rstate when reads fail,
   * you should not need these */
-Only in openssl-0.9.8k/ssl: ssl.h.orig
-diff -uarp openssl-0.9.8k.orig/ssl/ssl3.h openssl-0.9.8k/ssl/ssl3.h
---- openssl-0.9.8k.orig/ssl/ssl3.h	2009-10-05 17:00:39.000000000 -0700
-+++ openssl-0.9.8k/ssl/ssl3.h	2009-10-05 17:00:24.000000000 -0700
+Only in openssl-1.0.0/ssl: ssl.h.orig
+diff -uarp openssl-1.0.0.orig/ssl/ssl3.h openssl-1.0.0/ssl/ssl3.h
+-- openssl-1.0.0.orig/ssl/ssl3.h	2010-01-06 12:37:38.000000000 -0500
++++ openssl-1.0.0/ssl/ssl3.h	2010-04-21 14:39:49.000000000 -0400
 @@ -456,6 +456,7 @@ typedef struct ssl3_state_st
  /*client */
  /* extra state */
@@ -194,14 +194,13 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssl3.h openssl-0.9.8k/ssl/ssl3.h
  /* write to server */
  #define SSL3_ST_CW_CLNT_HELLO_A		(0x110|SSL_ST_CONNECT)
  #define SSL3_ST_CW_CLNT_HELLO_B		(0x111|SSL_ST_CONNECT)
-diff -uarp openssl-0.9.8k.orig/ssl/ssl_lib.c openssl-0.9.8k/ssl/ssl_lib.c
---- openssl-0.9.8k.orig/ssl/ssl_lib.c	2009-02-23 08:02:47.000000000 -0800
-+++ openssl-0.9.8k/ssl/ssl_lib.c	2009-10-05 17:00:24.000000000 -0700
-@@ -2696,7 +2696,17 @@ void SSL_set_msg_callback(SSL *ssl, void
+diff -uarp openssl-1.0.0.orig/ssl/ssl_lib.c openssl-1.0.0/ssl/ssl_lib.c
+--- openssl-1.0.0.orig/ssl/ssl_lib.c	2010-02-17 14:43:46.000000000 -0500
++++ openssl-1.0.0/ssl/ssl_lib.c	2010-04-21 17:02:45.000000000 -0400
+@@ -3031,6 +3031,18 @@ void SSL_set_msg_callback(SSL *ssl, void
  	SSL_callback_ctrl(ssl, SSL_CTRL_SET_MSG_CALLBACK, (void (*)(void))cb);
  	}
- 
--
+
 +int SSL_cutthrough_complete(const SSL *s)
 +	{
 +	return (!s->server &&                 /* cutthrough only applies to clients */
@@ -209,17 +208,17 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssl_lib.c openssl-0.9.8k/ssl/ssl_lib.c
 +		s->version >= SSL3_VERSION &&
 +		s->s3->in_read_app_data == 0 &&   /* cutthrough only applies to write() */
 +		(SSL_get_mode((SSL*)s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) &&  /* cutthrough enabled */
-+		SSL_get_cipher_bits(s, NULL) >= 128 &&                      /* strong cipher choosen */
-+		(s->state == SSL3_ST_CR_SESSION_TICKET_A ||                 /* ready to write app-data*/
-+			s->state == SSL3_ST_CR_FINISHED_A));
++		SSL_get_cipher_bits(s, NULL) >= 128 &&       /* strong cipher choosen */
++		(s->state == SSL3_ST_CR_SESSION_TICKET_A ||  /* ready to write app-data*/
++		s->state == SSL3_ST_CR_FINISHED_A));
 +	}
- 
- #if defined(_WINDLL) && defined(OPENSSL_SYS_WIN16)
- #include "../crypto/bio/bss_file.c"
-Only in openssl-0.9.8k/ssl: ssl_lib.c.orig
-diff -uarp openssl-0.9.8k.orig/ssl/ssltest.c openssl-0.9.8k/ssl/ssltest.c
---- openssl-0.9.8k.orig/ssl/ssltest.c	2009-10-05 17:00:39.000000000 -0700
-+++ openssl-0.9.8k/ssl/ssltest.c	2009-10-05 17:00:24.000000000 -0700
++
+ /* Allocates new EVP_MD_CTX and sets pointer to it into given pointer
+  * vairable, freeing  EVP_MD_CTX previously stored in that variable, if
+  * any. If EVP_MD pointer is passed, initializes ctx with this md
+diff -uarp openssl-1.0.0.orig/ssl/ssltest.c openssl-1.0.0/ssl/ssltest.c
+--- openssl-1.0.0.orig/ssl/ssltest.c	2010-01-24 11:57:38.000000000 -0500
++++ openssl-1.0.0/ssl/ssltest.c	2010-04-21 17:06:35.000000000 -0400
 @@ -279,6 +279,7 @@ static void sv_usage(void)
  	fprintf(stderr," -test_cipherlist - verifies the order of the ssl cipher lists\n");
  	fprintf(stderr," -c_small_records - enable client side use of small SSL record buffers\n");
@@ -261,9 +260,9 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssltest.c openssl-0.9.8k/ssl/ssltest.c
  
  #ifndef OPENSSL_NO_DH
  	if (!no_dhe)
-diff -uarp openssl-0.9.8k.orig/test/testssl openssl-0.9.8k/test/testssl
---- openssl-0.9.8k.orig/test/testssl	2009-10-05 17:00:39.000000000 -0700
-+++ openssl-0.9.8k/test/testssl	2009-10-05 17:00:24.000000000 -0700
+diff -uarp openssl-1.0.0.orig/test/testssl openssl-1.0.0/test/testssl
+--- openssl-1.0.0.orig/test/testssl	2006-03-10 18:06:27.000000000 -0500
++++ openssl-1.0.0/test/testssl	2010-04-21 16:50:13.000000000 -0400
 @@ -79,6 +79,8 @@ $ssltest -server_auth -client_auth -s_sm
  echo test sslv2/sslv3 with both client and server authentication and small client and server buffers
  $ssltest -server_auth -client_auth -c_small_records -s_small_records $CA $extra || exit 1
