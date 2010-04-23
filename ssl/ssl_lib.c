@@ -326,6 +326,7 @@ SSL *SSL_new(SSL_CTX *ctx)
 	OPENSSL_assert(s->sid_ctx_length <= sizeof s->sid_ctx);
 	memcpy(&s->sid_ctx,&ctx->sid_ctx,sizeof(s->sid_ctx));
 	s->verify_callback=ctx->default_verify_callback;
+	s->session_creation_enabled=1;
 	s->generate_session_id=ctx->generate_session_id;
 
 	s->param = X509_VERIFY_PARAM_new();

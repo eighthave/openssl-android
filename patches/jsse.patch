@@ -1,0 +1,158 @@
+--- openssl-1.0.0.orig/ssl/ssl.h	2010-01-06 09:37:38.000000000 -0800
++++ openssl-1.0.0/ssl/ssl.h	2010-05-03 01:44:52.000000000 -0700
+@@ -1083,6 +1090,9 @@ struct ssl_st
+ 	/* This can also be in the session once a session is established */
+ 	SSL_SESSION *session;
+ 
++        /* This can be disabled to prevent the use of uncached sessions */
++	int session_creation_enabled;
++
+ 	/* Default generate session ID callback. */
+ 	GEN_SESSION_CB generate_session_id;
+ 
+@@ -1559,6 +1571,7 @@ int	SSL_SESSION_print(BIO *fp,const SSL_
+ void	SSL_SESSION_free(SSL_SESSION *ses);
+ int	i2d_SSL_SESSION(SSL_SESSION *in,unsigned char **pp);
+ int	SSL_set_session(SSL *to, SSL_SESSION *session);
++void	SSL_set_session_creation_enabled(SSL *, int);
+ int	SSL_CTX_add_session(SSL_CTX *s, SSL_SESSION *c);
+ int	SSL_CTX_remove_session(SSL_CTX *,SSL_SESSION *c);
+ int	SSL_CTX_set_generate_session_id(SSL_CTX *, GEN_SESSION_CB);
+@@ -2204,6 +2217,7 @@ void ERR_load_SSL_strings(void);
+ #define SSL_R_SCSV_RECEIVED_WHEN_RENEGOTIATING		 345
+ #define SSL_R_SERVERHELLO_TLSEXT			 275
+ #define SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED		 277
++#define SSL_R_SESSION_MAY_NOT_BE_CREATED		 2000
+ #define SSL_R_SHORT_READ				 219
+ #define SSL_R_SIGNATURE_FOR_NON_SIGNING_CERTIFICATE	 220
+ #define SSL_R_SSL23_DOING_SESSION_ID_REUSE		 221
+--- openssl-1.0.0.orig/ssl/d1_clnt.c	2010-01-26 11:46:29.000000000 -0800
++++ openssl-1.0.0/ssl/d1_clnt.c	2010-05-03 01:44:52.000000000 -0700
+@@ -613,6 +613,12 @@ int dtls1_client_hello(SSL *s)
+ #endif
+ 			(s->session->not_resumable))
+ 			{
++		        if (!s->session_creation_enabled)
++				{
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
++				SSLerr(SSL_F_DTLS1_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
++				goto err;
++				}
+ 			if (!ssl_get_new_session(s,0))
+ 				goto err;
+ 			}
+--- openssl-1.0.0.orig/ssl/s23_clnt.c	2010-02-16 06:20:40.000000000 -0800
++++ openssl-1.0.0/ssl/s23_clnt.c	2010-05-03 01:44:52.000000000 -0700
+@@ -687,6 +687,13 @@ static int ssl23_get_server_hello(SSL *s
+ 
+ 	/* Since, if we are sending a ssl23 client hello, we are not
+ 	 * reusing a session-id */
++        if (!s->session_creation_enabled)
++		{
++		if (!(s->client_version == SSL2_VERSION))
++			ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
++		SSLerr(SSL_F_SSL23_GET_SERVER_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
++		goto err;
++		}
+ 	if (!ssl_get_new_session(s,0))
+ 		goto err;
+ 
+--- openssl-1.0.0.orig/ssl/s3_clnt.c	2010-02-27 16:24:24.000000000 -0800
++++ openssl-1.0.0/ssl/s3_clnt.c	2010-05-03 01:44:52.000000000 -0700
+@@ -621,6 +668,12 @@ int ssl3_client_hello(SSL *s)
+ #endif
+ 			(sess->not_resumable))
+ 			{
++		        if (!s->session_creation_enabled)
++				{
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
++				SSLerr(SSL_F_SSL3_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
++				goto err;
++				}
+ 			if (!ssl_get_new_session(s,0))
+ 				goto err;
+ 			}
+@@ -829,6 +882,12 @@ int ssl3_get_server_hello(SSL *s)
+ 		s->hit=0;
+ 		if (s->session->session_id_length > 0)
+ 			{
++		        if (!s->session_creation_enabled)
++				{
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
++				SSLerr(SSL_F_SSL3_GET_SERVER_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
++				goto err;
++				}
+ 			if (!ssl_get_new_session(s,0))
+ 				{
+ 				al=SSL_AD_INTERNAL_ERROR;
+--- openssl-1.0.0.orig/ssl/s3_srvr.c	2010-02-27 15:04:10.000000000 -0800
++++ openssl-1.0.0/ssl/s3_srvr.c	2010-05-03 01:44:52.000000000 -0700
+@@ -869,6 +869,12 @@ int ssl3_get_client_hello(SSL *s)
+ 	 */
+ 	if ((s->new_session && (s->options & SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION)))
+ 		{
++	        if (!s->session_creation_enabled)
++			{
++			ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
++			SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
++			goto err;
++		}
+ 		if (!ssl_get_new_session(s,1))
+ 			goto err;
+ 		}
+@@ -883,6 +889,12 @@ int ssl3_get_client_hello(SSL *s)
+ 			goto err;
+ 		else /* i == 0 */
+ 			{
++		        if (!s->session_creation_enabled)
++				{
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
++				SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
++				goto err;
++				}
+ 			if (!ssl_get_new_session(s,1))
+ 				goto err;
+ 			}
+--- openssl-1.0.0.orig/ssl/ssl_err.c	2010-01-06 09:37:38.000000000 -0800
++++ openssl-1.0.0/ssl/ssl_err.c	2010-05-03 01:44:52.000000000 -0700
+@@ -462,6 +462,7 @@ static ERR_STRING_DATA SSL_str_reasons[]
+ {ERR_REASON(SSL_R_SCSV_RECEIVED_WHEN_RENEGOTIATING),"scsv received when renegotiating"},
+ {ERR_REASON(SSL_R_SERVERHELLO_TLSEXT)    ,"serverhello tlsext"},
+ {ERR_REASON(SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED),"session id context uninitialized"},
++{ERR_REASON(SSL_R_SESSION_MAY_NOT_BE_CREATED),"session may not be created"},
+ {ERR_REASON(SSL_R_SHORT_READ)            ,"short read"},
+ {ERR_REASON(SSL_R_SIGNATURE_FOR_NON_SIGNING_CERTIFICATE),"signature for non signing certificate"},
+ {ERR_REASON(SSL_R_SSL23_DOING_SESSION_ID_REUSE),"ssl23 doing session id reuse"},
+--- openssl-1.0.0.orig/ssl/ssl_lib.c	2010-02-17 11:43:46.000000000 -0800
++++ openssl-1.0.0/ssl/ssl_lib.c	2010-05-03 01:44:52.000000000 -0700
+@@ -326,6 +326,7 @@ SSL *SSL_new(SSL_CTX *ctx)
+ 	OPENSSL_assert(s->sid_ctx_length <= sizeof s->sid_ctx);
+ 	memcpy(&s->sid_ctx,&ctx->sid_ctx,sizeof(s->sid_ctx));
+ 	s->verify_callback=ctx->default_verify_callback;
++	s->session_creation_enabled=1;
+ 	s->generate_session_id=ctx->generate_session_id;
+ 
+ 	s->param = X509_VERIFY_PARAM_new();
+--- openssl-1.0.0.orig/ssl/ssl_sess.c	2010-02-01 08:49:42.000000000 -0800
++++ openssl-1.0.0/ssl/ssl_sess.c	2010-05-03 01:44:52.000000000 -0700
+@@ -261,6 +261,11 @@ static int def_generate_session_id(const
+ 	return 0;
+ }
+ 
++void SSL_set_session_creation_enabled (SSL *s, int creation_enabled)
++	{
++	s->session_creation_enabled = creation_enabled;
++	}
++
+ int ssl_get_new_session(SSL *s, int session)
+ 	{
+ 	/* This gets used by clients and servers. */
+@@ -269,6 +274,8 @@ int ssl_get_new_session(SSL *s, int sess
+ 	SSL_SESSION *ss=NULL;
+ 	GEN_SESSION_CB cb = def_generate_session_id;
+ 
++	/* caller should check this if they can do better error handling */
++        if (!s->session_creation_enabled) return(0);
+ 	if ((ss=SSL_SESSION_new()) == NULL) return(0);
+ 
+ 	/* If the context has a default timeout, use it */

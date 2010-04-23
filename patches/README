@@ -21,3 +21,9 @@ Enables SSL3+ clients to send application data immediately following the
 Finished message even when negotiating full-handshakes.  With this patch,
 clients can negotiate SSL connections in 1-RTT even when performing
 full-handshakes.
+
+jsse.patch
+
+Support for JSSE implementation based on OpenSSL.
+
+

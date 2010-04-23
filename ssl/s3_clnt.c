@@ -668,6 +668,12 @@ int ssl3_client_hello(SSL *s)
 #endif
 			(sess->not_resumable))
 			{
+		        if (!s->session_creation_enabled)
+				{
+				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
+				SSLerr(SSL_F_SSL3_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
+				goto err;
+				}
 			if (!ssl_get_new_session(s,0))
 				goto err;
 			}
@@ -876,6 +882,12 @@ int ssl3_get_server_hello(SSL *s)
 		s->hit=0;
 		if (s->session->session_id_length > 0)
 			{
+		        if (!s->session_creation_enabled)
+				{
+				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
+				SSLerr(SSL_F_SSL3_GET_SERVER_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
+				goto err;
+				}
 			if (!ssl_get_new_session(s,0))
 				{
 				al=SSL_AD_INTERNAL_ERROR;

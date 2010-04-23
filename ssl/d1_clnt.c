@@ -613,6 +613,12 @@ int dtls1_client_hello(SSL *s)
 #endif
 			(s->session->not_resumable))
 			{
+		        if (!s->session_creation_enabled)
+				{
+				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
+				SSLerr(SSL_F_DTLS1_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
+				goto err;
+				}
 			if (!ssl_get_new_session(s,0))
 				goto err;
 			}
