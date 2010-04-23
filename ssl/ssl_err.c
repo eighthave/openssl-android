@@ -462,6 +462,7 @@ static ERR_STRING_DATA SSL_str_reasons[]=
 {ERR_REASON(SSL_R_SCSV_RECEIVED_WHEN_RENEGOTIATING),"scsv received when renegotiating"},
 {ERR_REASON(SSL_R_SERVERHELLO_TLSEXT)    ,"serverhello tlsext"},
 {ERR_REASON(SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED),"session id context uninitialized"},
+{ERR_REASON(SSL_R_SESSION_MAY_NOT_BE_CREATED),"session may not be created"},
 {ERR_REASON(SSL_R_SHORT_READ)            ,"short read"},
 {ERR_REASON(SSL_R_SIGNATURE_FOR_NON_SIGNING_CERTIFICATE),"signature for non signing certificate"},
 {ERR_REASON(SSL_R_SSL23_DOING_SESSION_ID_REUSE),"ssl23 doing session id reuse"},

@@ -869,6 +869,12 @@ int ssl3_get_client_hello(SSL *s)
 	 */
 	if ((s->new_session && (s->options & SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION)))
 		{
+	        if (!s->session_creation_enabled)
+			{
+			ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
+			SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
+			goto err;
+		}
 		if (!ssl_get_new_session(s,1))
 			goto err;
 		}
@@ -883,6 +889,12 @@ int ssl3_get_client_hello(SSL *s)
 			goto err;
 		else /* i == 0 */
 			{
+		        if (!s->session_creation_enabled)
+				{
+				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
+				SSLerr(SSL_F_SSL3_GET_CLIENT_HELLO,SSL_R_SESSION_MAY_NOT_BE_CREATED);
+				goto err;
+				}
 			if (!ssl_get_new_session(s,1))
 				goto err;
 			}

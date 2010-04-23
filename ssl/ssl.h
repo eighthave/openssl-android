@@ -1090,6 +1090,9 @@ struct ssl_st
 	/* This can also be in the session once a session is established */
 	SSL_SESSION *session;
 
+        /* This can be disabled to prevent the use of uncached sessions */
+	int session_creation_enabled;
+
 	/* Default generate session ID callback. */
 	GEN_SESSION_CB generate_session_id;
 
@@ -1568,6 +1571,7 @@ int	SSL_SESSION_print(BIO *fp,const SSL_SESSION *ses);
 void	SSL_SESSION_free(SSL_SESSION *ses);
 int	i2d_SSL_SESSION(SSL_SESSION *in,unsigned char **pp);
 int	SSL_set_session(SSL *to, SSL_SESSION *session);
+void	SSL_set_session_creation_enabled(SSL *, int);
 int	SSL_CTX_add_session(SSL_CTX *s, SSL_SESSION *c);
 int	SSL_CTX_remove_session(SSL_CTX *,SSL_SESSION *c);
 int	SSL_CTX_set_generate_session_id(SSL_CTX *, GEN_SESSION_CB);
@@ -2213,6 +2217,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_R_SCSV_RECEIVED_WHEN_RENEGOTIATING		 345
 #define SSL_R_SERVERHELLO_TLSEXT			 275
 #define SSL_R_SESSION_ID_CONTEXT_UNINITIALIZED		 277
+#define SSL_R_SESSION_MAY_NOT_BE_CREATED		 2000
 #define SSL_R_SHORT_READ				 219
 #define SSL_R_SIGNATURE_FOR_NON_SIGNING_CERTIFICATE	 220
 #define SSL_R_SSL23_DOING_SESSION_ID_REUSE		 221
