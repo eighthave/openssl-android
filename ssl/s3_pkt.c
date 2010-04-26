@@ -293,6 +293,11 @@ static int ssl3_get_record(SSL *s)
 	size_t extra;
 	int decryption_failed_or_bad_record_mac = 0;
 	unsigned char *mac = NULL;
+#if defined(SSL3_ALIGN_PAYLOAD) && SSL3_ALIGN_PAYLOAD!=0
+	long align=SSL3_ALIGN_PAYLOAD;
+#else
+	long align=0;
+#endif
 
 	rr= &(s->s3->rrec);
 	sess=s->session;
@@ -351,26 +356,26 @@ fprintf(stderr, "Record type=%d, Length=%d\n", rr->type, rr->length);
 			goto err;
 			}
 
-		if (rr->length > s->s3->rbuf.len - SSL3_RT_HEADER_LENGTH)
-			{
-			al=SSL_AD_RECORD_OVERFLOW;
-			SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_PACKET_LENGTH_TOO_LONG);
-			goto f_err;
-			}
-
 		/* If we receive a valid record larger than the current buffer size,
 		 * allocate some memory for it.
 		 */
 		if (rr->length > s->s3->rbuf.len - SSL3_RT_HEADER_LENGTH)
 			{
-			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + SSL3_RT_HEADER_LENGTH))==NULL)
+			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + SSL3_RT_HEADER_LENGTH + align))==NULL)
 				{
 				SSLerr(SSL_F_SSL3_GET_RECORD,ERR_R_INTERNAL_ERROR);
 				goto err;
 				}
 			s->s3->rbuf.buf=p;
-			s->s3->rbuf.len=rr->length + SSL3_RT_HEADER_LENGTH;
+			s->s3->rbuf.len=rr->length + SSL3_RT_HEADER_LENGTH + align;
 			s->packet= &(s->s3->rbuf.buf[0]);
+			}
+
+		if (rr->length > s->s3->rbuf.len - SSL3_RT_HEADER_LENGTH)
+			{
+			al=SSL_AD_RECORD_OVERFLOW;
+			SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_PACKET_LENGTH_TOO_LONG);
+			goto f_err;
 			}
 
 		/* now s->rstate == SSL_ST_READ_BODY */

@@ -1,5 +1,5 @@
 --- openssl-1.0.0.orig/ssl/d1_pkt.c	2009-10-04 09:52:35.000000000 -0700
-+++ openssl-1.0.0/ssl/d1_pkt.c	2010-04-14 10:18:00.000000000 -0700
++++ openssl-1.0.0/ssl/d1_pkt.c	2010-04-26 10:24:55.000000000 -0700
 @@ -614,6 +614,24 @@ again:
  			goto again;
  			}
@@ -51,7 +51,7 @@
  	if (s->s3->alert_dispatch)
  		{
 --- openssl-1.0.0.orig/ssl/s23_srvr.c	2010-02-16 06:20:40.000000000 -0800
-+++ openssl-1.0.0/ssl/s23_srvr.c	2010-04-13 17:01:07.000000000 -0700
++++ openssl-1.0.0/ssl/s23_srvr.c	2010-04-26 10:24:55.000000000 -0700
 @@ -403,8 +403,13 @@ int ssl23_get_client_hello(SSL *s)
  		v[0] = p[3]; /* == SSL3_VERSION_MAJOR */
  		v[1] = p[4];
@@ -68,7 +68,7 @@
  			SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_RECORD_TOO_LARGE);
  			goto err;
 --- openssl-1.0.0.orig/ssl/s3_both.c	2010-03-24 16:16:49.000000000 -0700
-+++ openssl-1.0.0/ssl/s3_both.c	2010-04-14 10:11:42.000000000 -0700
++++ openssl-1.0.0/ssl/s3_both.c	2010-04-26 10:24:55.000000000 -0700
 @@ -715,13 +715,20 @@ int ssl3_setup_read_buffer(SSL *s)
  
  	if (s->s3->rbuf.buf == NULL)
@@ -127,8 +127,20 @@
  	}
 -
 --- openssl-1.0.0.orig/ssl/s3_pkt.c	2010-03-25 04:22:42.000000000 -0700
-+++ openssl-1.0.0/ssl/s3_pkt.c	2010-04-13 17:19:06.000000000 -0700
-@@ -301,7 +301,8 @@ static int ssl3_get_record(SSL *s)
++++ openssl-1.0.0/ssl/s3_pkt.c	2010-04-26 10:24:55.000000000 -0700
+@@ -293,6 +293,11 @@ static int ssl3_get_record(SSL *s)
+ 	size_t extra;
+ 	int decryption_failed_or_bad_record_mac = 0;
+ 	unsigned char *mac = NULL;
++#if defined(SSL3_ALIGN_PAYLOAD) && SSL3_ALIGN_PAYLOAD!=0
++	long align=SSL3_ALIGN_PAYLOAD;
++#else
++	long align=0;
++#endif
+ 
+ 	rr= &(s->s3->rrec);
+ 	sess=s->session;
+@@ -301,7 +306,8 @@ static int ssl3_get_record(SSL *s)
  		extra=SSL3_RT_MAX_EXTRA;
  	else
  		extra=0;
@@ -138,8 +150,8 @@
  		{
  		/* An application error: SLS_OP_MICROSOFT_BIG_SSLV3_BUFFER
  		 * set after ssl3_setup_buffers() was done */
-@@ -357,6 +358,21 @@ fprintf(stderr, "Record type=%d, Length=
- 			goto f_err;
+@@ -350,6 +356,21 @@ fprintf(stderr, "Record type=%d, Length=
+ 			goto err;
  			}
  
 +		/* If we receive a valid record larger than the current buffer size,
@@ -147,20 +159,20 @@
 +		 */
 +		if (rr->length > s->s3->rbuf.len - SSL3_RT_HEADER_LENGTH)
 +			{
-+			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + SSL3_RT_HEADER_LENGTH))==NULL)
++			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + SSL3_RT_HEADER_LENGTH + align))==NULL)
 +				{
 +				SSLerr(SSL_F_SSL3_GET_RECORD,ERR_R_INTERNAL_ERROR);
 +				goto err;
 +				}
 +			s->s3->rbuf.buf=p;
-+			s->s3->rbuf.len=rr->length + SSL3_RT_HEADER_LENGTH;
++			s->s3->rbuf.len=rr->length + SSL3_RT_HEADER_LENGTH + align;
 +			s->packet= &(s->s3->rbuf.buf[0]);
 +			}
 +
- 		/* now s->rstate == SSL_ST_READ_BODY */
- 		}
- 
-@@ -576,6 +592,7 @@ int ssl3_write_bytes(SSL *s, int type, c
+ 		if (rr->length > s->s3->rbuf.len - SSL3_RT_HEADER_LENGTH)
+ 			{
+ 			al=SSL_AD_RECORD_OVERFLOW;
+@@ -576,6 +597,7 @@ int ssl3_write_bytes(SSL *s, int type, c
  	const unsigned char *buf=buf_;
  	unsigned int tot,n,nw;
  	int i;
@@ -168,7 +180,7 @@
  
  	s->rwstate=SSL_NOTHING;
  	tot=s->s3->wnum;
-@@ -595,8 +612,13 @@ int ssl3_write_bytes(SSL *s, int type, c
+@@ -595,8 +617,13 @@ int ssl3_write_bytes(SSL *s, int type, c
  	n=(len-tot);
  	for (;;)
  		{
@@ -286,7 +298,7 @@
  	if (!no_dhe)
  		{
 --- openssl-1.0.0.orig/test/testssl	2006-03-10 15:06:27.000000000 -0800
-+++ openssl-1.0.0/test/testssl	2010-04-13 17:01:07.000000000 -0700
++++ openssl-1.0.0/test/testssl	2010-04-26 10:24:55.000000000 -0700
 @@ -70,6 +70,16 @@ $ssltest -client_auth $CA $extra || exit
  echo test sslv2/sslv3 with both client and server authentication
  $ssltest -server_auth -client_auth $CA $extra || exit 1

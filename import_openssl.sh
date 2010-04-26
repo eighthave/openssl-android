@@ -41,8 +41,9 @@ function usage() {
     echo $message
   fi 
   echo "Usage:"
-  echo "  ./import_openssl.sh import /path/to/openssl-*.tar.gz"
-  echo "  ./import_openssl.sh regenerate patch/*.patch"
+  echo "  ./import_openssl.sh import </path/to/openssl-*.tar.gz>"
+  echo "  ./import_openssl.sh regenerate <patch/*.patch>"
+  echo "  ./import_openssl.sh generate <patch/*.patch> </path/to/openssl-*.tar.gz>"
   exit 1
 }
 
@@ -76,6 +77,12 @@ function main() {
     declare -r patch=$1
     shift || usage "No patch file specified."
     regenerate $patch
+  elif [ "$command" = "generate" ]; then
+    declare -r patch=$1
+    shift || usage "No patch file specified."
+    declare -r tar=$1
+    shift || usage "No tar file specified."
+    generate $patch $tar
   else   
     usage "Unknown command specified $command. Try import or regenerate."
   fi
@@ -84,34 +91,10 @@ function main() {
 function import() {
   declare -r OPENSSL_SOURCE=$1
 
-  declare -r NEW_OPENSSL_VERSION=`expr match "$OPENSSL_SOURCE" '.*-\(.*\).tar.gz' || true`
-  if [ "$NEW_OPENSSL_VERSION" == "" ]; then
-    die "Invalid openssl source filename: $OPENSSL_SOURCE"
-  fi
+  untar $OPENSSL_SOURCE
+  applypatches
 
-  # Remove old source
-  if [ "$OPENSSL_VERSION" == "" ]; then
-    die "OPENSSL_VERSION not declared in openssl.version"
-  else
-    rm -rf openssl-$OPENSSL_VERSION.orig/
-    rm -rf openssl-$OPENSSL_VERSION/
-  fi
-
-  # Process new source
-  OPENSSL_VERSION=$NEW_OPENSSL_VERSION
-  rm -rf openssl-$OPENSSL_VERSION/     # remove stale files
-  tar -zxf $OPENSSL_SOURCE
-  mv openssl-$OPENSSL_VERSION openssl-$OPENSSL_VERSION.orig
-  find openssl-$OPENSSL_VERSION.orig -type f -print0 | xargs -0 chmod a-w
-  tar -zxf $OPENSSL_SOURCE
   cd openssl-$OPENSSL_VERSION
-
-  # Apply appropriate patches
-  for i in $OPENSSL_PATCHES; do
-    echo "Applying patch $i"
-    patch -p1 < ../patches/$i || die "Could not apply patches/$i. Fix source and run: $0 regenerate patches/$i"
-  done
-
   # Cleanup patch output
   find . -type f -name "*.orig" -print0 | xargs -0 rm -f
 
@@ -171,25 +154,84 @@ function import() {
   rm -rf $UNNEEDED_SOURCES
 
   cd ..
-  rm -rf include/
-  cp -af openssl-$OPENSSL_VERSION/include .
-  rm -rf apps/
-  mv openssl-$OPENSSL_VERSION/apps .
-  rm -rf ssl/
-  mv openssl-$OPENSSL_VERSION/ssl .
-  rm -rf crypto/
-  mv openssl-$OPENSSL_VERSION/crypto .
-  rm -rf android.testssl/
-  mv openssl-$OPENSSL_VERSION/android.testssl .
-  rm -f e_os.h e_os2.h
-  mv openssl-$OPENSSL_VERSION/e_os.h openssl-$OPENSSL_VERSION/e_os2.h .
-  rm -rf openssl-$OPENSSL_VERSION.orig/
-  rm -rf openssl-$OPENSSL_VERSION/
+
+  NEEDED_SOURCES="$NEEDED_SOURCES android.testssl"
+  for i in $NEEDED_SOURCES; do
+    echo "Updating $i"
+    rm -rf $i
+    mv openssl-$OPENSSL_VERSION/$i .
+  done
+
+  cleantar
 }
 
 function regenerate() {
   declare -r patch=$1
   
+  generatepatch $patch
+}
+
+function generate() {
+  declare -r patch=$1
+  declare -r OPENSSL_SOURCE=$2
+  
+  untar $OPENSSL_SOURCE
+  applypatches
+
+  for i in $NEEDED_SOURCES; do
+    echo "Restoring $i"
+    rm -rf openssl-$OPENSSL_VERSION/$i
+    cp -rf ./$i openssl-$OPENSSL_VERSION/$i
+  done
+
+  generatepatch $patch
+  cleantar
+}
+
+function untar() {
+  declare -r OPENSSL_SOURCE=$1
+  declare -r NEW_OPENSSL_VERSION=`expr match "$OPENSSL_SOURCE" '.*-\(.*\).tar.gz' || true`
+  if [ "$NEW_OPENSSL_VERSION" == "" ]; then
+    die "Invalid openssl source filename: $OPENSSL_SOURCE"
+  fi
+
+  # Remove old source
+  if [ "$OPENSSL_VERSION" == "" ]; then
+    die "OPENSSL_VERSION not declared in openssl.version"
+  else
+    rm -rf openssl-$OPENSSL_VERSION.orig/
+    rm -rf openssl-$OPENSSL_VERSION/
+  fi
+
+  # Process new source
+  OPENSSL_VERSION=$NEW_OPENSSL_VERSION
+  rm -rf openssl-$OPENSSL_VERSION/     # remove stale files
+  tar -zxf $OPENSSL_SOURCE
+  mv openssl-$OPENSSL_VERSION openssl-$OPENSSL_VERSION.orig
+  find openssl-$OPENSSL_VERSION.orig -type f -print0 | xargs -0 chmod a-w
+  tar -zxf $OPENSSL_SOURCE
+}
+
+function cleantar() {
+  rm -rf openssl-$OPENSSL_VERSION.orig/
+  rm -rf openssl-$OPENSSL_VERSION/
+}
+
+function applypatches () {
+  cd openssl-$OPENSSL_VERSION
+
+  # Apply appropriate patches
+  for i in $OPENSSL_PATCHES; do
+    echo "Applying patch $i"
+    patch -p1 < ../patches/$i || die "Could not apply patches/$i. Fix source and run: $0 regenerate patches/$i"
+  done
+
+  cd ..
+}
+
+function generatepatch() {
+  declare -r patch=$1
+
   declare -r variable_name=OPENSSL_PATCHES_`basename $patch .patch | sed s/-/_/`_SOURCES
   # http://tldp.org/LDP/abs/html/ivr.html
   eval declare -r sources=\$$variable_name
@@ -198,6 +240,8 @@ function regenerate() {
   for i in $sources; do
     diff -uap openssl-$OPENSSL_VERSION.orig/$i openssl-$OPENSSL_VERSION/$i >> $patch && die "ERROR: No diff for patch $path in file $i"
   done
+  echo "Generated patch $patch"
+  echo "NOTE To make sure there are not unwanted changes from conflicting patches, be sure to review the generated patch."
 }
 
 main $@
