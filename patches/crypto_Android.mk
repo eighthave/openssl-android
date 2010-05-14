@@ -226,6 +226,33 @@ LOCAL_SRC_FILES+= \
 	dso/dso_openssl.c \
 	dso/dso_vms.c \
 	dso/dso_win32.c \
+	ec/ec2_mult.c \
+	ec/ec2_smpl.c \
+	ec/ec_ameth.c \
+	ec/ec_asn1.c \
+	ec/ec_check.c \
+	ec/ec_curve.c \
+	ec/ec_cvt.c \
+	ec/ec_err.c \
+	ec/ec_key.c \
+	ec/ec_lib.c \
+	ec/ec_mult.c \
+	ec/ec_pmeth.c \
+	ec/ec_print.c \
+	ec/eck_prn.c \
+	ec/ecp_mont.c \
+	ec/ecp_nist.c \
+	ec/ecp_smpl.c \
+	ecdh/ech_err.c \
+	ecdh/ech_key.c \
+	ecdh/ech_lib.c \
+	ecdh/ech_ossl.c \
+	ecdsa/ecs_asn1.c \
+	ecdsa/ecs_err.c \
+	ecdsa/ecs_lib.c \
+	ecdsa/ecs_ossl.c \
+	ecdsa/ecs_sign.c \
+	ecdsa/ecs_vrf.c \
 	err/err.c \
 	err/err_all.c \
 	err/err_prn.c \
@@ -256,6 +283,7 @@ LOCAL_SRC_FILES+= \
 	evp/evp_pkey.c \
 	evp/m_dss.c \
 	evp/m_dss1.c \
+	evp/m_ecdsa.c \
 	evp/m_md2.c \
 	evp/m_md4.c \
 	evp/m_md5.c \

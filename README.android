@@ -38,11 +38,11 @@ The following steps are recommended for porting new OpenSSL versions.
 
 5) Cleanup before building with:
 
-     m -j16 clean-openssl clean-libcrypto clean-libssl
+     m -j16 clean-libcrypto clean-libssl clean-openssl clean-ssltest
 
 6) Build openssl from the external/openssl directory with:
 
-     mm -j16
+     mm -j16 snod && adb sync system
 
    If there are build errors, then patches/*.mk, openssl.config, or
    android-config.mk may need updating.

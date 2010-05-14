@@ -17,6 +17,7 @@ LOCAL_SRC_FILES:= \
 	dsa.c \
 	dsaparam.c \
 	ecparam.c \
+	ec.c \
 	enc.c \
 	engine.c \
 	errstr.c \
@@ -64,7 +65,7 @@ include $(LOCAL_PATH)/../android-config.mk
 
 # These flags omit whole features from the commandline "openssl".
 # However, portions of these features are actually turned on.
-LOCAL_CFLAGS += -DOPENSSL_NO_EC -DOPENSSL_NO_ECDSA -DOPENSSL_NO_DTLS1
+LOCAL_CFLAGS += -DOPENSSL_NO_DTLS1
 
 
 LOCAL_MODULE:= openssl

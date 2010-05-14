@@ -60,7 +60,7 @@ include $(CLEAR_VARS)
 
 # ssltest
 
-LOCAL_SRC_FILES:=ssltest.c
+LOCAL_SRC_FILES:= ssltest.c
 
 LOCAL_C_INCLUDES += $(local_c_includes)
 
@@ -68,7 +68,7 @@ LOCAL_SHARED_LIBRARIES := libssl
 
 include $(LOCAL_PATH)/../android-config.mk
 
-LOCAL_MODULE:=ssltest
+LOCAL_MODULE:= ssltest
 
 LOCAL_MODULE_TAGS := optional
 
