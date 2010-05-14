@@ -1304,6 +1304,32 @@ int SSL_set_cipher_list(SSL *s,const char *str)
 	return 1;
 	}
 
+/** specify the ciphers to be used by the SSL */
+int SSL_set_cipher_lists(SSL *s,STACK_OF(SSL_CIPHER) *sk)
+	{
+	STACK_OF(SSL_CIPHER) *tmp_cipher_list;
+
+	if (sk == NULL)
+		return 0;
+
+        /* Based on end of ssl_create_cipher_list */
+	tmp_cipher_list = sk_SSL_CIPHER_dup(sk);
+	if (tmp_cipher_list == NULL)
+		{
+		return 0;
+		}
+	if (s->cipher_list != NULL)
+		sk_SSL_CIPHER_free(s->cipher_list);
+	s->cipher_list = sk;
+	if (s->cipher_list_by_id != NULL)
+		sk_SSL_CIPHER_free(s->cipher_list_by_id);
+	s->cipher_list_by_id = tmp_cipher_list;
+	(void)sk_SSL_CIPHER_set_cmp_func(s->cipher_list_by_id,ssl_cipher_ptr_id_cmp);
+
+	sk_SSL_CIPHER_sort(s->cipher_list_by_id);
+	return 1;
+	}
+
 /* works well for SSLv2, not so good for SSLv3 */
 char *SSL_get_shared_ciphers(const SSL *s,char *buf,int len)
 	{

@@ -1512,6 +1512,7 @@ BIO *	SSL_get_rbio(const SSL *s);
 BIO *	SSL_get_wbio(const SSL *s);
 #endif
 int	SSL_set_cipher_list(SSL *s, const char *str);
+int	SSL_set_cipher_lists(SSL *s, STACK_OF(SSL_CIPHER) *sk);
 void	SSL_set_read_ahead(SSL *s, int yes);
 int	SSL_get_verify_mode(const SSL *s);
 int	SSL_get_verify_depth(const SSL *s);
