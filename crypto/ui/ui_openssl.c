@@ -184,7 +184,7 @@
 # undef  SGTTY
 #endif
 
-#if defined(linux) && !defined(TERMIO)
+#if defined(linux) && !defined(TERMIO) && !defined(__ANDROID__)
 # undef  TERMIOS
 # define TERMIO
 # undef  SGTTY
