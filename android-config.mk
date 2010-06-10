@@ -16,3 +16,6 @@ LOCAL_CFLAGS += -DOPENSSL_NO_HW -DOPENSSL_NO_ENGINE
 # Although we initially considered enabling ZLIB b/2361399
 # this was disabled because some some sites fail to handshake if its enabled b/2710492 b/2710497
 # LOCAL_CFLAGS += -DZLIB
+
+# Debug
+# LOCAL_CFLAGS += -DCIPHER_DEBUG
