@@ -49,11 +49,13 @@ The following steps are recommended for porting new OpenSSL versions.
 
 7) Run tests to make sure things are working:
 
+     # Run local openssl tests
      (cd android.testssl/ && ./testssl.sh)
-     adb shell run-core-tests tests.xnet.AllTests
-     adb shell run-core-tests javax.net.ssl.AllTests
-     adb shell run-core-tests org.apache.harmony.math.tests.java.math.AllTests
-     adb shell run-core-tests tests.api.java.math.BigIntegerTest
+     # Build and sync libcore tests
+     (croot && cd libcore && mm -j16 snod && adb remount && adb sync)
+     # Run libcore tests
+     (croot && ~dalvik-prebuild/vogar/bin/vogar --classpath out/target/common/obj/JAVA_LIBRARIES/core-tests-support_intermediates/classes.jar --classpath out/target/common/obj/JAVA_LIBRARIES/core-tests_intermediates/classes.jar javax.net.ssl tests.api.javax.net tests.api.java.math.BigIntegerTest org.apache.harmony.math.tests.java.math)
+     # try an https website
      adb shell am start https://online.citibank.com # confirm result in browser
 
 8) Do a full build before checking in:
