@@ -182,20 +182,18 @@ int ssl3_connect(SSL *s)
 	
 	s->in_handshake++;
 	if (!SSL_in_init(s) || SSL_in_before(s)) SSL_clear(s); 
-	if (SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH)
-		{
-		/* Renegotiation complicates the state machine */
-		s->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
 #if 0	/* Send app data in separate packet, otherwise, some particular site
 	 * (only one site so far) closes the socket.
 	 * Note: there is a very small chance that two TCP packets
 	 * could be arriving at server combined into a single TCP packet,
 	 * then trigger that site to break. We haven't encounter that though.
 	 */
+	if (SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH)
+		{
 		/* Send app data along with CCS/Finished */
 		s->s3->flags |= SSL3_FLAGS_DELAY_CLIENT_FINISHED;
-#endif
 		}
+#endif
 
 	for (;;)
 		{
@@ -464,7 +462,9 @@ int ssl3_connect(SSL *s)
 				}
 			else
 				{
-				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128)
+				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128
+				    && s->s3->previous_client_finished_len == 0 /* no cutthrough on renegotiation (would complicate the state machine) */
+				    )
 					{
 					if (s->s3->flags & SSL3_FLAGS_DELAY_CLIENT_FINISHED)
 						{
