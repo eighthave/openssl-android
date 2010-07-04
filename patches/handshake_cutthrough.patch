@@ -45,28 +45,26 @@ diff -uarp openssl-0.9.8k.orig/apps/s_client.c openssl-0.9.8k/apps/s_client.c
 diff -uarp openssl-0.9.8k.orig/ssl/s3_clnt.c openssl-0.9.8k/ssl/s3_clnt.c
 --- openssl-0.9.8k.orig/ssl/s3_clnt.c	2009-02-14 13:50:14.000000000 -0800
 +++ openssl-0.9.8k/ssl/s3_clnt.c	2009-10-05 17:00:24.000000000 -0700
-@@ -186,6 +186,20 @@ int ssl3_connect(SSL *s)
+@@ -186,6 +186,18 @@ int ssl3_connect(SSL *s)
  	
  	s->in_handshake++;
  	if (!SSL_in_init(s) || SSL_in_before(s)) SSL_clear(s); 
-+	if (SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH)
-+		{
-+		/* Renegotiation complicates the state machine */
-+		s->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
 +#if 0	/* Send app data in separate packet, otherwise, some particular site
 +	 * (only one site so far) closes the socket.
 +	 * Note: there is a very small chance that two TCP packets
 +	 * could be arriving at server combined into a single TCP packet,
 +	 * then trigger that site to break. We haven't encounter that though.
 +	 */
++	if (SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH)
++		{
 +		/* Send app data along with CCS/Finished */
 +		s->s3->flags |= SSL3_FLAGS_DELAY_CLIENT_FINISHED;
-+#endif
 +		}
++#endif
  
  	for (;;)
  		{
-@@ -454,14 +468,29 @@ int ssl3_connect(SSL *s)
+@@ -454,14 +468,31 @@ int ssl3_connect(SSL *s)
  				}
  			else
  				{
@@ -74,7 +72,9 @@ diff -uarp openssl-0.9.8k.orig/ssl/s3_clnt.c openssl-0.9.8k/ssl/s3_clnt.c
 -				/* Allow NewSessionTicket if ticket expected */
 -				if (s->tlsext_ticket_expected)
 -					s->s3->tmp.next_state=SSL3_ST_CR_SESSION_TICKET_A;
-+				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128)
++				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128
++				    && s->s3->previous_client_finished_len == 0 /* no cutthrough on renegotiation (would complicate the state machine) */
++				    )
 +					{
 +					if (s->s3->flags & SSL3_FLAGS_DELAY_CLIENT_FINISHED)
 +						{
@@ -197,7 +197,7 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssl3.h openssl-0.9.8k/ssl/ssl3.h
 diff -uarp openssl-0.9.8k.orig/ssl/ssl_lib.c openssl-0.9.8k/ssl/ssl_lib.c
 --- openssl-0.9.8k.orig/ssl/ssl_lib.c	2009-02-23 08:02:47.000000000 -0800
 +++ openssl-0.9.8k/ssl/ssl_lib.c	2009-10-05 17:00:24.000000000 -0700
-@@ -2696,7 +2696,17 @@ void SSL_set_msg_callback(SSL *ssl, void
+@@ -2696,7 +2696,18 @@ void SSL_set_msg_callback(SSL *ssl, void
  	SSL_callback_ctrl(ssl, SSL_CTRL_SET_MSG_CALLBACK, (void (*)(void))cb);
  	}
  
@@ -210,6 +210,7 @@ diff -uarp openssl-0.9.8k.orig/ssl/ssl_lib.c openssl-0.9.8k/ssl/ssl_lib.c
 +		s->s3->in_read_app_data == 0 &&   /* cutthrough only applies to write() */
 +		(SSL_get_mode((SSL*)s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) &&  /* cutthrough enabled */
 +		SSL_get_cipher_bits(s, NULL) >= 128 &&                      /* strong cipher choosen */
++		s->s3->previous_client_finished_len == 0 &&                 /* not a renegotiation handshake */
 +		(s->state == SSL3_ST_CR_SESSION_TICKET_A ||                 /* ready to write app-data*/
 +			s->state == SSL3_ST_CR_FINISHED_A));
 +	}
