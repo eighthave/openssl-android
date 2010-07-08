@@ -2,9 +2,8 @@ OpenSSL on the Android platform.
 ---
 
 The code in this directory is based on $OPENSSL_VERSION in the file
-openssl.config, and some backported OpenSSL code in crypto/0.9.9-dev.
-See patches/README for more information on how the code differs from
-$OPENSSL_VERSION.
+openssl.version. See patches/README for more information on how the
+code differs from $OPENSSL_VERSION.
 
 Porting New Versions of OpenSSL.
 --
@@ -58,7 +57,7 @@ The following steps are recommended for porting new OpenSSL versions.
 
 8) Do a full build before checking in:
 
-     m clobber && m -j16
+     m -j16
 
 Optionally, check whether build flags (located in android-config.mk
 need to be updated.  Doing this step will help ensure that the
