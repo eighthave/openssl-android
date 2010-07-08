@@ -1,5 +1,5 @@
 --- openssl-1.0.0.orig/apps/openssl.c	2009-10-04 09:43:21.000000000 -0700
-+++ openssl-1.0.0/apps/openssl.c	2010-05-14 11:50:23.000000000 -0700
++++ openssl-1.0.0/apps/openssl.c	2010-05-18 14:05:14.000000000 -0700
 @@ -275,8 +275,10 @@ int main(int Argc, char *Argv[])
  		if (ERR_GET_REASON(ERR_peek_last_error())
  		    == CONF_R_NO_SUCH_FILE)
@@ -12,7 +12,7 @@
  			NCONF_free(config);
  			config = NULL;
 --- openssl-1.0.0.orig/apps/progs.h	2009-06-30 08:08:38.000000000 -0700
-+++ openssl-1.0.0/apps/progs.h	2010-05-14 11:50:23.000000000 -0700
++++ openssl-1.0.0/apps/progs.h	2010-05-18 14:05:38.000000000 -0700
 @@ -43,7 +43,9 @@ extern int spkac_main(int argc,char *arg
  extern int smime_main(int argc,char *argv[]);
  extern int rand_main(int argc,char *argv[]);
@@ -57,7 +57,7 @@
  	{FUNC_TYPE_MD,"md2",dgst_main},
  #endif
 --- openssl-1.0.0.orig/apps/speed.c	2010-03-03 11:56:17.000000000 -0800
-+++ openssl-1.0.0/apps/speed.c	2010-05-14 11:50:23.000000000 -0700
++++ openssl-1.0.0/apps/speed.c	2010-05-18 14:05:57.000000000 -0700
 @@ -1718,6 +1718,7 @@ int MAIN(int argc, char **argv)
  			}
  		}
@@ -74,6 +74,17 @@
  #ifndef OPENSSL_NO_CAMELLIA
  	if (doit[D_CBC_128_CML])
  		{
+--- openssl-1.0.0.orig/crypto/ui/ui_openssl.c	2009-10-04 09:43:21.000000000 -0700
++++ openssl-1.0.0/crypto/ui/ui_openssl.c	2010-05-18 13:36:26.000000000 -0700
+@@ -184,7 +184,7 @@
+ # undef  SGTTY
+ #endif
+ 
+-#if defined(linux) && !defined(TERMIO)
++#if defined(linux) && !defined(TERMIO) && !defined(__ANDROID__)
+ # undef  TERMIOS
+ # define TERMIO
+ # undef  SGTTY
 --- openssl-1.0.0.orig/apps/s_client.c	2009-12-16 12:28:28.000000000 -0800
 +++ openssl-1.0.0/apps/s_client.c	2010-04-14 14:25:09.000000000 -0700
 @@ -216,6 +216,9 @@ static int c_ign_eof=0;
