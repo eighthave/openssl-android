@@ -99,13 +99,14 @@ function main() {
 function import() {
   declare -r OPENSSL_SOURCE=$1
 
-  untar $OPENSSL_SOURCE
-  applypatches
+  untar $OPENSSL_SOURCE readonly
+  applypatches $OPENSSL_DIR
 
   cd $OPENSSL_DIR
 
   # Configure source (and print Makefile defines for review, see README.android)
   ./Configure $CONFIGURE_ARGS
+  rm -f apps/CA.pl.bak crypto/opensslconf.h.bak
   echo
   echo BEGIN Makefile defines to compare with android-config.mk
   echo
@@ -182,8 +183,8 @@ function generate() {
   declare -r OPENSSL_SOURCE=$2
 
   untar $OPENSSL_SOURCE
+  applypatches $OPENSSL_DIR_ORIG $patch
   prune
-  applypatches
 
   for i in $NEEDED_SOURCES; do
     echo "Restoring $i"
@@ -197,6 +198,7 @@ function generate() {
 
 function untar() {
   declare -r OPENSSL_SOURCE=$1
+  declare -r readonly=$2
 
   # Remove old source
   cleantar
@@ -204,7 +206,9 @@ function untar() {
   # Process new source
   tar -zxf $OPENSSL_SOURCE
   mv $OPENSSL_DIR $OPENSSL_DIR_ORIG
-  find $OPENSSL_DIR_ORIG -type f -print0 | xargs -0 chmod a-w
+  if [ ! -z $readonly ]; then
+    find $OPENSSL_DIR_ORIG -type f -print0 | xargs -0 chmod a-w
+  fi
   tar -zxf $OPENSSL_SOURCE
 }
 
@@ -220,12 +224,20 @@ function cleantar() {
 }
 
 function applypatches () {
-  cd $OPENSSL_DIR
+  declare -r dir=$1
+  declare -r skip_patch=$2
+
+  cd $dir
 
   # Apply appropriate patches
   for i in $OPENSSL_PATCHES; do
-    echo "Applying patch $i"
-    patch -p1 < ../patches/$i || die "Could not apply patches/$i. Fix source and run: $0 regenerate patches/$i"
+    if [ ! "$skip_patch" = "patches/$i" ]; then
+      echo "Applying patch $i"
+      patch -p1 < ../patches/$i || die "Could not apply patches/$i. Fix source and run: $0 regenerate patches/$i"
+    else
+      echo "Skiping patch $i"
+    fi
+
   done
 
   # Cleanup patch output
