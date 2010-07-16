@@ -32,6 +32,9 @@ LOCAL_SRC_FILES:= \
 	pkcs12.c \
 	pkcs7.c \
 	pkcs8.c \
+	pkey.c \
+	pkeyparam.c \
+	pkeyutl.c \
 	prime.c \
 	rand.c \
 	req.c \
@@ -39,6 +42,7 @@ LOCAL_SRC_FILES:= \
 	rsautl.c \
 	s_cb.c \
 	s_client.c \
+	s_server.c \
 	s_socket.c \
 	s_time.c \
 	sess_id.c \

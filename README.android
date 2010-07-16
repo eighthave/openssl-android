@@ -65,6 +65,12 @@ The following steps are recommended for porting new OpenSSL versions.
      harmony_tests.jar is built from Subversion http://harmony.apache.org/
      Within Google it can be found at ~dalvik-prebuild/bin/harmony_tests.jar
 
+     # You can also run openssl s_server as a test server on the device:
+     adb push ./android.testssl/CAss.cnf /sdcard/CAss.cnf
+     adb shell openssl req -config /sdcard/CAss.cnf -x509 -nodes -days 365 -subj '/C=US/ST=California/L=Mountain View/CN=localhost' -newkey rsa:1024 -keyout /sdcard/server.pem -out /sdcard/server.pem
+     adb shell openssl s_server -cert /sdcard/server.pem -www -verify 1
+     adb shell am start https://localhost:4433 # confirm result in browser
+
 8) Do a full build before checking in:
 
      m -j16
