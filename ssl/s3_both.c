@@ -322,8 +322,11 @@ unsigned long ssl3_output_cert_chain(SSL *s, X509 *x)
 	unsigned long l=7;
 	BUF_MEM *buf;
 	int no_chain;
+	STACK_OF(X509) *cert_chain;
 
-	if ((s->mode & SSL_MODE_NO_AUTO_CHAIN) || s->ctx->extra_certs)
+	cert_chain = SSL_get_certificate_chain(s, x);
+
+	if ((s->mode & SSL_MODE_NO_AUTO_CHAIN) || s->ctx->extra_certs || cert_chain)
 		no_chain = 1;
 	else
 		no_chain = 0;
@@ -374,6 +377,10 @@ unsigned long ssl3_output_cert_chain(SSL *s, X509 *x)
 		if (ssl3_add_cert_to_buf(buf, &l, x))
 			return(0);
 		}
+
+	for (i=0; i<sk_X509_num(cert_chain); i++)
+		if (ssl3_add_cert_to_buf(buf, &l, sk_X509_value(cert_chain,i)))
+			return(0);
 
 	l-=7;
 	p=(unsigned char *)&(buf->data[4]);

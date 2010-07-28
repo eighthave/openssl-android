@@ -43,9 +43,7 @@ extern int spkac_main(int argc,char *argv[]);
 extern int smime_main(int argc,char *argv[]);
 extern int rand_main(int argc,char *argv[]);
 extern int engine_main(int argc,char *argv[]);
-#ifndef OPENSSL_NO_OCSP
 extern int ocsp_main(int argc,char *argv[]);
-#endif
 extern int prime_main(int argc,char *argv[]);
 extern int ts_main(int argc,char *argv[]);
 
@@ -109,9 +107,7 @@ FUNCTION functions[] = {
 #endif
 	{FUNC_TYPE_GENERAL,"genpkey",genpkey_main},
 #if !defined(OPENSSL_NO_SOCK) && !(defined(OPENSSL_NO_SSL2) && defined(OPENSSL_NO_SSL3))
-#if 0 /* ANDROID */
-        {FUNC_TYPE_GENERAL,"s_server",s_server_main},
-#endif
+	{FUNC_TYPE_GENERAL,"s_server",s_server_main},
 #endif
 #if !defined(OPENSSL_NO_SOCK) && !(defined(OPENSSL_NO_SSL2) && defined(OPENSSL_NO_SSL3))
 	{FUNC_TYPE_GENERAL,"s_client",s_client_main},
@@ -137,11 +133,9 @@ FUNCTION functions[] = {
 	{FUNC_TYPE_GENERAL,"pkcs12",pkcs12_main},
 #endif
 	{FUNC_TYPE_GENERAL,"pkcs8",pkcs8_main},
-#if 0 /* ANDROID */
 	{FUNC_TYPE_GENERAL,"pkey",pkey_main},
 	{FUNC_TYPE_GENERAL,"pkeyparam",pkeyparam_main},
 	{FUNC_TYPE_GENERAL,"pkeyutl",pkeyutl_main},
-#endif
 	{FUNC_TYPE_GENERAL,"spkac",spkac_main},
 	{FUNC_TYPE_GENERAL,"smime",smime_main},
 	{FUNC_TYPE_GENERAL,"rand",rand_main},

@@ -1528,6 +1528,8 @@ int	SSL_use_PrivateKey(SSL *ssl, EVP_PKEY *pkey);
 int	SSL_use_PrivateKey_ASN1(int pk,SSL *ssl, const unsigned char *d, long len);
 int	SSL_use_certificate(SSL *ssl, X509 *x);
 int	SSL_use_certificate_ASN1(SSL *ssl, const unsigned char *d, int len);
+int	SSL_use_certificate_chain(SSL *ssl, STACK_OF(X509) *cert_chain);
+STACK_OF(X509) * SSL_get_certificate_chain(SSL *ssl, X509 *x);
 
 #ifndef OPENSSL_NO_STDIO
 int	SSL_use_RSAPrivateKey_file(SSL *ssl, const char *file, int type);
@@ -2014,6 +2016,7 @@ void ERR_load_SSL_strings(void);
 #define SSL_F_SSL_UNDEFINED_VOID_FUNCTION		 244
 #define SSL_F_SSL_USE_CERTIFICATE			 198
 #define SSL_F_SSL_USE_CERTIFICATE_ASN1			 199
+#define SSL_F_SSL_USE_CERTIFICATE_CHAIN			 2000
 #define SSL_F_SSL_USE_CERTIFICATE_FILE			 200
 #define SSL_F_SSL_USE_PRIVATEKEY			 201
 #define SSL_F_SSL_USE_PRIVATEKEY_ASN1			 202

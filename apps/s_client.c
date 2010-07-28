@@ -216,9 +216,6 @@ static int c_ign_eof=0;
 /* Default PSK identity and key */
 static char *psk_identity="Client_identity";
 /*char *psk_key=NULL;  by default PSK is not used */
-#if 1 /* ANDROID */
-char *psk_key=NULL;
-#endif
 
 static unsigned int psk_client_cb(SSL *ssl, const char *hint, char *identity,
 	unsigned int max_identity_len, unsigned char *psk,
