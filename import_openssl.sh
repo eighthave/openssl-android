@@ -19,7 +19,7 @@
 # This script imports new versions of OpenSSL (http://openssl.org/source) into the
 # Android source tree.  To run, (1) fetch the appropriate tarball from the OpenSSL repository,
 # (2) check the gpg/pgp signature, and then (3) run:
-#   ./import_openssl.sh openssl-*.tar.gz
+#   ./import_openssl.sh import openssl-*.tar.gz
 #
 # IMPORTANT: See README.android for additional details.
 
@@ -39,35 +39,42 @@ function usage() {
 
   if [ ! "$message" = "" ]; then
     echo $message
-  fi 
+  fi
   echo "Usage:"
-  echo "  ./import_openssl.sh import /path/to/openssl-*.tar.gz"
-  echo "  ./import_openssl.sh regenerate patch/*.patch"
+  echo "  ./import_openssl.sh import </path/to/openssl-*.tar.gz>"
+  echo "  ./import_openssl.sh regenerate <patch/*.patch>"
+  echo "  ./import_openssl.sh generate <patch/*.patch> </path/to/openssl-*.tar.gz>"
   exit 1
 }
 
 function main() {
-  if [ ! -f openssl.config ]; then
-    die "openssl.config not found"
-  fi
-  
-  if [ ! -f openssl.version ]; then
-    die "openssl.version not found"
-  fi
-  
   if [ ! -d patches ]; then
     die "OpenSSL patch directory patches/ not found"
   fi
 
-  source openssl.config
-  source openssl.version
+  if [ ! -f openssl.version ]; then
+    die "openssl.version not found"
+  fi
 
-  if [ "$CONFIGURE_ARGS" == "" ]; then
+  source openssl.version
+  if [ "$OPENSSL_VERSION" == "" ]; then
+    die "Invalid openssl.version; see README.android for more information"
+  fi
+
+  OPENSSL_DIR=openssl-$OPENSSL_VERSION
+  OPENSSL_DIR_ORIG=$OPENSSL_DIR.orig
+
+  if [ ! -f openssl.config ]; then
+    die "openssl.config not found"
+  fi
+
+  source openssl.config
+  if [ "$CONFIGURE_ARGS" == "" -o "$UNNEEDED_SOURCES" == "" -o "$NEEDED_SOURCES" == "" ]; then
     die "Invalid openssl.config; see README.android for more information"
   fi
 
   declare -r command=$1
-  shift || usage "No command specified. Try import or regenerate."
+  shift || usage "No command specified. Try import, regenerate, or generate."
   if [ "$command" = "import" ]; then
     declare -r tar=$1
     shift || usage "No tar file specified."
@@ -75,55 +82,38 @@ function main() {
   elif [ "$command" = "regenerate" ]; then
     declare -r patch=$1
     shift || usage "No patch file specified."
+    [ -d $OPENSSL_DIR ] || usage "$OPENSSL_DIR not found, did you mean to use generate?"
+    [ -d $OPENSSL_DIR_ORIG_ORIG ] || usage "$OPENSSL_DIR_ORIG not found, did you mean to use generate?"
     regenerate $patch
-  else   
-    usage "Unknown command specified $command. Try import or regenerate."
+  elif [ "$command" = "generate" ]; then
+    declare -r patch=$1
+    shift || usage "No patch file specified."
+    declare -r tar=$1
+    shift || usage "No tar file specified."
+    generate $patch $tar
+  else
+    usage "Unknown command specified $command. Try import, regenerate, or generate."
   fi
 }
 
 function import() {
   declare -r OPENSSL_SOURCE=$1
 
-  declare -r NEW_OPENSSL_VERSION=`expr match "$OPENSSL_SOURCE" '.*-\(.*\).tar.gz' || true`
-  if [ "$NEW_OPENSSL_VERSION" == "" ]; then
-    die "Invalid openssl source filename: $OPENSSL_SOURCE"
-  fi
+  untar $OPENSSL_SOURCE readonly
+  applypatches $OPENSSL_DIR
 
-  # Remove old source
-  if [ "$OPENSSL_VERSION" == "" ]; then
-    die "OPENSSL_VERSION not declared in openssl.version"
-  else
-    rm -rf openssl-$OPENSSL_VERSION.orig/
-    rm -rf openssl-$OPENSSL_VERSION/
-  fi
-
-  # Process new source
-  OPENSSL_VERSION=$NEW_OPENSSL_VERSION
-  rm -rf openssl-$OPENSSL_VERSION/     # remove stale files
-  tar -zxf $OPENSSL_SOURCE
-  mv openssl-$OPENSSL_VERSION openssl-$OPENSSL_VERSION.orig
-  find openssl-$OPENSSL_VERSION.orig -type f -print0 | xargs -0 chmod a-w
-  tar -zxf $OPENSSL_SOURCE
-  cd openssl-$OPENSSL_VERSION
-
-  # Apply appropriate patches
-  for i in $OPENSSL_PATCHES; do
-    echo "Applying patch $i"
-    patch -p1 < ../patches/$i || die "Could not apply patches/$i. Fix source and run: $0 regenerate patches/$i"
-  done
-
-  # Cleanup patch output
-  find . -type f -name "*.orig" -print0 | xargs -0 rm -f
+  cd $OPENSSL_DIR
 
   # Configure source (and print Makefile defines for review, see README.android)
   ./Configure $CONFIGURE_ARGS
-  echo 
+  rm -f apps/CA.pl.bak crypto/opensslconf.h.bak
+  echo
   echo BEGIN Makefile defines to compare with android-config.mk
-  echo 
+  echo
   grep -e -D Makefile | grep -v CONFIGURE_ARGS= | grep -v OPTIONS= | grep -v -e -DOPENSSL_NO_DEPRECATED
-  echo 
+  echo
   echo END Makefile defines to compare with android-config.mk
-  echo 
+  echo
 
   # TODO(): Fixup android-config.mk
 
@@ -144,6 +134,13 @@ function import() {
   cp ../patches/crypto_Android.mk crypto/Android.mk
   cp ../patches/ssl_Android.mk ssl/Android.mk
 
+  # Generate asm
+  perl crypto/aes/asm/aes-armv4.pl         > crypto/aes/asm/aes-armv4.s
+  perl crypto/bn/asm/armv4-mont.pl         > crypto/bn/asm/armv4-mont.s
+  perl crypto/sha/asm/sha1-armv4-large.pl  > crypto/sha/asm/sha1-armv4-large.s
+  perl crypto/sha/asm/sha256-armv4.pl      > crypto/sha/asm/sha256-armv4.s
+  perl crypto/sha/asm/sha512-armv4.pl      > crypto/sha/asm/sha512-armv4.s
+
   # Setup android.testssl directory
   mkdir android.testssl
   cat test/testssl | \
@@ -160,36 +157,112 @@ function import() {
   cp apps/server2.pem android.testssl/
   cp ../patches/testssl.sh android.testssl/
 
-  # Prune unnecessary sources
-  rm -rf $UNNEEDED_SOURCES
-
   cd ..
-  cp -af openssl-$OPENSSL_VERSION/include .
-  rm -rf apps/
-  mv openssl-$OPENSSL_VERSION/apps .
-  rm -rf ssl/
-  mv openssl-$OPENSSL_VERSION/ssl .
-  rm -rf crypto/
-  mv openssl-$OPENSSL_VERSION/crypto .
-  rm -rf android.testssl/
-  mv openssl-$OPENSSL_VERSION/android.testssl .
-  rm -f e_os.h e_os2.h
-  mv openssl-$OPENSSL_VERSION/e_os.h openssl-$OPENSSL_VERSION/e_os2.h .
-  rm -rf openssl-$OPENSSL_VERSION.orig/
-  rm -rf openssl-$OPENSSL_VERSION/
+
+  # Prune unnecessary sources
+  prune
+
+  NEEDED_SOURCES="$NEEDED_SOURCES android.testssl"
+  for i in $NEEDED_SOURCES; do
+    echo "Updating $i"
+    rm -r $i
+    mv $OPENSSL_DIR/$i .
+  done
+
+  cleantar
 }
 
 function regenerate() {
   declare -r patch=$1
-  
+
+  generatepatch $patch
+}
+
+function generate() {
+  declare -r patch=$1
+  declare -r OPENSSL_SOURCE=$2
+
+  untar $OPENSSL_SOURCE
+  applypatches $OPENSSL_DIR_ORIG $patch
+  prune
+
+  for i in $NEEDED_SOURCES; do
+    echo "Restoring $i"
+    rm -r $OPENSSL_DIR/$i
+    cp -rf $i $OPENSSL_DIR/$i
+  done
+
+  generatepatch $patch
+  cleantar
+}
+
+function untar() {
+  declare -r OPENSSL_SOURCE=$1
+  declare -r readonly=$2
+
+  # Remove old source
+  cleantar
+
+  # Process new source
+  tar -zxf $OPENSSL_SOURCE
+  mv $OPENSSL_DIR $OPENSSL_DIR_ORIG
+  if [ ! -z $readonly ]; then
+    find $OPENSSL_DIR_ORIG -type f -print0 | xargs -0 chmod a-w
+  fi
+  tar -zxf $OPENSSL_SOURCE
+}
+
+function prune() {
+  echo "Removing $UNNEEDED_SOURCES"
+  (cd $OPENSSL_DIR_ORIG && rm -rf $UNNEEDED_SOURCES)
+  (cd $OPENSSL_DIR      && rm -r  $UNNEEDED_SOURCES)
+}
+
+function cleantar() {
+  rm -rf $OPENSSL_DIR_ORIG
+  rm -rf $OPENSSL_DIR
+}
+
+function applypatches () {
+  declare -r dir=$1
+  declare -r skip_patch=$2
+
+  cd $dir
+
+  # Apply appropriate patches
+  for i in $OPENSSL_PATCHES; do
+    if [ ! "$skip_patch" = "patches/$i" ]; then
+      echo "Applying patch $i"
+      patch -p1 < ../patches/$i || die "Could not apply patches/$i. Fix source and run: $0 regenerate patches/$i"
+    else
+      echo "Skiping patch $i"
+    fi
+
+  done
+
+  # Cleanup patch output
+  find . -type f -name "*.orig" -print0 | xargs -0 rm -f
+
+  cd ..
+}
+
+function generatepatch() {
+  declare -r patch=$1
+
+  # Cleanup stray files before generating patch
+  find $BOUNCYCASTLE_DIR -type f -name "*.orig" -print0 | xargs -0 rm -f
+  find $BOUNCYCASTLE_DIR -type f -name "*~" -print0 | xargs -0 rm -f
+
   declare -r variable_name=OPENSSL_PATCHES_`basename $patch .patch | sed s/-/_/`_SOURCES
   # http://tldp.org/LDP/abs/html/ivr.html
   eval declare -r sources=\$$variable_name
   rm -f $patch
-  touch $patch  
+  touch $patch
   for i in $sources; do
-    diff -uap openssl-$OPENSSL_VERSION.orig/$i openssl-$OPENSSL_VERSION/$i >> $patch && die "ERROR: No diff for patch $path in file $i"
+    LC_ALL=C TZ=UTC0 diff -aup $OPENSSL_DIR_ORIG/$i $OPENSSL_DIR/$i >> $patch && die "ERROR: No diff for patch $path in file $i"
   done
+  echo "Generated patch $patch"
+  echo "NOTE To make sure there are not unwanted changes from conflicting patches, be sure to review the generated patch."
 }
 
 main $@

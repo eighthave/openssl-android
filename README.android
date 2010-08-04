@@ -2,9 +2,8 @@ OpenSSL on the Android platform.
 ---
 
 The code in this directory is based on $OPENSSL_VERSION in the file
-openssl.config, and some backported OpenSSL code in crypto/0.9.9-dev.
-See patches/README for more information on how the code differs from
-$OPENSSL_VERSION.
+openssl.version. See patches/README for more information on how the
+code differs from $OPENSSL_VERSION.
 
 Porting New Versions of OpenSSL.
 --
@@ -38,23 +37,43 @@ The following steps are recommended for porting new OpenSSL versions.
 
 5) Cleanup before building with:
 
-     m -j16 clean-openssl clean-libcrypto clean-libssl
+     m -j16 clean-libcrypto clean-libssl clean-openssl clean-ssltest
 
 6) Build openssl from the external/openssl directory with:
 
-     mm -j16
+     mm -j16 snod && adb sync system
 
    If there are build errors, then patches/*.mk, openssl.config, or
    android-config.mk may need updating.
 
 7) Run tests to make sure things are working:
 
+     # Run local openssl tests
      (cd android.testssl/ && ./testssl.sh)
-     adb shell run-core-tests tests.xnet.AllTests
+     # Build and sync libcore tests
+     (croot && cd libcore && mm -j16 snod && adb remount && adb sync)
+     # Run tests from libcore
+     (croot && vogar --classpath out/target/common/obj/JAVA_LIBRARIES/core-tests-support_intermediates/classes.jar --classpath out/target/common/obj/JAVA_LIBRARIES/core-tests_intermediates/classes.jar javax.net.ssl tests.api.javax.net)
+     # Run tests from Harmony
+     (croot && vogar --classpath harmony_tests.jar tests.api.java.math.BigIntegerTest org.apache.harmony.tests.java.math)
+     # try an https website
+     adb shell am start https://online.citibank.com # confirm result in browser
+
+     The vogar tool can be found externally at http://code.google.com/p/vogar/
+     Within Google it can be run with ~dalvik-prebuild/vogar/bin/vogar
+
+     harmony_tests.jar is built from Subversion http://harmony.apache.org/
+     Within Google it can be found at ~dalvik-prebuild/bin/harmony_tests.jar
+
+     # You can also run openssl s_server as a test server on the device:
+     adb push ./android.testssl/CAss.cnf /sdcard/CAss.cnf
+     adb shell openssl req -config /sdcard/CAss.cnf -x509 -nodes -days 365 -subj '/C=US/ST=California/L=Mountain View/CN=localhost' -newkey rsa:1024 -keyout /sdcard/server.pem -out /sdcard/server.pem
+     adb shell openssl s_server -cert /sdcard/server.pem -www -verify 1
+     adb shell am start https://localhost:4433 # confirm result in browser
 
 8) Do a full build before checking in:
 
-     m clobber && m -j16
+     m -j16
 
 Optionally, check whether build flags (located in android-config.mk
 need to be updated.  Doing this step will help ensure that the
