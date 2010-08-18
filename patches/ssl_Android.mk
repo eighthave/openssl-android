@@ -5,9 +5,7 @@ local_c_includes := \
 	external/openssl/include \
 	external/openssl/crypto
 
-include $(CLEAR_VARS)
-
-LOCAL_SRC_FILES:= \
+local_src_files:= \
 	s2_meth.c \
 	s2_srvr.c \
 	s2_clnt.c \
@@ -46,30 +44,30 @@ LOCAL_SRC_FILES:= \
 	ssl_err.c \
 	kssl.c
 
+include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../android-config.mk
-
+LOCAL_SRC_FILES += $(local_src_files)
 LOCAL_C_INCLUDES += $(local_c_includes)
-
 LOCAL_SHARED_LIBRARIES += libcrypto
-
 LOCAL_MODULE:= libssl
-
 include $(BUILD_SHARED_LIBRARY)
 
-include $(CLEAR_VARS)
+ifeq ($(WITH_HOST_DALVIK),true)
+    include $(CLEAR_VARS)
+    include $(LOCAL_PATH)/../android-config.mk
+    LOCAL_SRC_FILES += $(local_src_files)
+    LOCAL_C_INCLUDES += $(local_c_includes)
+    LOCAL_SHARED_LIBRARIES += libcrypto
+    LOCAL_MODULE:= libssl
+    include $(BUILD_HOST_SHARED_LIBRARY)
+endif
 
 # ssltest
-
-LOCAL_SRC_FILES:= ssltest.c
-
-LOCAL_C_INCLUDES += $(local_c_includes)
-
-LOCAL_SHARED_LIBRARIES := libssl libcrypto
-
+include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../android-config.mk
-
+LOCAL_SRC_FILES:= ssltest.c
+LOCAL_C_INCLUDES += $(local_c_includes)
+LOCAL_SHARED_LIBRARIES := libssl libcrypto
 LOCAL_MODULE:= ssltest
-
 LOCAL_MODULE_TAGS := optional
-
 include $(BUILD_EXECUTABLE)
