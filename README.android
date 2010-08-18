@@ -14,7 +14,7 @@ The following steps are recommended for porting new OpenSSL versions.
    www.openssl.org/source (in openssl-*.tar.gz file). Check the PGP
    signature (found in matching openssl-*.tar.gz.asc file) with:
 
-     gpg openssl-*.tar.gz
+     gpg openssl-*.tar.gz.asc
 
    If the public key is not found, import the the one with the
    matching RSA key ID from http://www.openssl.org/about/, using:
