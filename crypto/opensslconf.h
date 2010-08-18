@@ -5,9 +5,6 @@
 #ifndef OPENSSL_DOING_MAKEDEPEND
 
 
-#ifndef OPENSSL_NO_BF
-# define OPENSSL_NO_BF
-#endif
 #ifndef OPENSSL_NO_CAST
 # define OPENSSL_NO_CAST
 #endif
@@ -56,9 +53,6 @@
    who haven't had the time to do the appropriate changes in their
    applications.  */
 #ifdef OPENSSL_ALGORITHM_DEFINES
-# if defined(OPENSSL_NO_BF) && !defined(NO_BF)
-#  define NO_BF
-# endif
 # if defined(OPENSSL_NO_CAST) && !defined(NO_CAST)
 #  define NO_CAST
 # endif

@@ -114,6 +114,11 @@ LOCAL_SRC_FILES+= \
 	asn1/x_val.c \
 	asn1/x_x509.c \
 	asn1/x_x509a.c \
+	bf/bf_cfb64.c \
+	bf/bf_ecb.c \
+	bf/bf_enc.c \
+	bf/bf_ofb64.c \
+	bf/bf_skey.c \
 	bio/b_dump.c \
 	bio/b_print.c \
 	bio/b_sock.c \
@@ -265,6 +270,7 @@ LOCAL_SRC_FILES+= \
 	evp/c_alld.c \
 	evp/digest.c \
 	evp/e_aes.c \
+	evp/e_bf.c \
 	evp/e_des.c \
 	evp/e_des3.c \
 	evp/e_null.c \
