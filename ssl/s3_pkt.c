@@ -321,7 +321,7 @@ again:
 			{
 			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + SSL3_RT_HEADER_LENGTH))==NULL)
 				{
-				SSLerr(SSL_F_SSL3_GET_RECORD,ERR_R_INTERNAL_ERROR);
+				SSLerr(SSL_F_SSL3_GET_RECORD,ERR_R_MALLOC_FAILURE);
 				goto err;
 				}
 			s->s3->rbuf.buf=p;
@@ -562,10 +562,10 @@ int ssl3_write_bytes(SSL *s, int type, const void *buf_, int len)
 	n=(len-tot);
 	for (;;)
 		{
-		if (!(SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS))
-			max_plain_length = SSL3_RT_MAX_PLAIN_LENGTH;
-		else
+		if (type == SSL3_RT_APPLICATION_DATA && (SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS))
 			max_plain_length = SSL3_RT_DEFAULT_PLAIN_LENGTH;
+		else
+			max_plain_length = SSL3_RT_MAX_PLAIN_LENGTH;
 
 		if (n > max_plain_length)
 			nw = max_plain_length;
@@ -663,6 +663,18 @@ static int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 			}
 		
 		s->s3->empty_fragment_done = 1;
+		}
+
+	/* resize if necessary to hold the data. */
+	if (len + SSL3_RT_DEFAULT_WRITE_OVERHEAD > wb->len)
+		{
+		if ((p=OPENSSL_realloc(wb->buf, len + SSL3_RT_DEFAULT_WRITE_OVERHEAD))==NULL)
+			{
+			SSLerr(SSL_F_DO_SSL3_WRITE,ERR_R_MALLOC_FAILURE);
+			goto err;
+			}
+		wb->buf = p;
+		wb->len = len + SSL3_RT_DEFAULT_WRITE_OVERHEAD;
 		}
 
 	p = wb->buf + prefix_len;
