@@ -1,6 +1,6 @@
---- openssl-1.0.0.orig/ssl/d1_pkt.c	2009-10-04 09:52:35.000000000 -0700
-+++ openssl-1.0.0/ssl/d1_pkt.c	2010-04-26 10:24:55.000000000 -0700
-@@ -614,6 +614,24 @@ again:
+--- openssl-1.0.0a.orig/ssl/d1_pkt.c	2010-04-14 00:09:55.000000000 +0000
++++ openssl-1.0.0a/ssl/d1_pkt.c	2010-08-25 21:12:39.000000000 +0000
+@@ -608,6 +608,24 @@ again:
  			goto again;
  			}
  
@@ -25,7 +25,7 @@
  		/* now s->rstate == SSL_ST_READ_BODY */
  		}
  
-@@ -1344,6 +1362,7 @@ int do_dtls1_write(SSL *s, int type, con
+@@ -1342,6 +1360,7 @@ int do_dtls1_write(SSL *s, int type, con
  	SSL3_BUFFER *wb;
  	SSL_SESSION *sess;
  	int bs;
@@ -33,7 +33,7 @@
  
  	/* first check if there is a SSL3_BUFFER still being written
  	 * out.  This will happen with non blocking IO */
-@@ -1353,6 +1372,16 @@ int do_dtls1_write(SSL *s, int type, con
+@@ -1351,6 +1370,16 @@ int do_dtls1_write(SSL *s, int type, con
  		return(ssl3_write_pending(s,type,buf,len));
  		}
  
@@ -50,8 +50,8 @@
  	/* If we have an alert to send, lets send it */
  	if (s->s3->alert_dispatch)
  		{
---- openssl-1.0.0.orig/ssl/s23_srvr.c	2010-02-16 06:20:40.000000000 -0800
-+++ openssl-1.0.0/ssl/s23_srvr.c	2010-04-26 10:24:55.000000000 -0700
+--- openssl-1.0.0a.orig/ssl/s23_srvr.c	2010-02-16 14:20:40.000000000 +0000
++++ openssl-1.0.0a/ssl/s23_srvr.c	2010-08-25 21:12:39.000000000 +0000
 @@ -403,8 +403,13 @@ int ssl23_get_client_hello(SSL *s)
  		v[0] = p[3]; /* == SSL3_VERSION_MAJOR */
  		v[1] = p[4];
@@ -67,9 +67,9 @@
  			{
  			SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,SSL_R_RECORD_TOO_LARGE);
  			goto err;
---- openssl-1.0.0.orig/ssl/s3_both.c	2010-03-24 16:16:49.000000000 -0700
-+++ openssl-1.0.0/ssl/s3_both.c	2010-04-26 10:24:55.000000000 -0700
-@@ -715,13 +715,20 @@ int ssl3_setup_read_buffer(SSL *s)
+--- openssl-1.0.0a.orig/ssl/s3_both.c	2010-03-24 23:16:49.000000000 +0000
++++ openssl-1.0.0a/ssl/s3_both.c	2010-08-25 21:12:39.000000000 +0000
+@@ -715,13 +722,20 @@ int ssl3_setup_read_buffer(SSL *s)
  
  	if (s->s3->rbuf.buf == NULL)
  		{
@@ -78,13 +78,13 @@
 -			+ headerlen + align;
 -		if (s->options & SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER)
 +		if (SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS)
-+			{
-+			len = SSL3_RT_DEFAULT_PACKET_SIZE;
-+			}
-+  		else
  			{
 -			s->s3->init_extra = 1;
 -			len += SSL3_RT_MAX_EXTRA;
++			len = SSL3_RT_DEFAULT_PACKET_SIZE;
++			}
++  		else
++			{
 +			len = SSL3_RT_MAX_PLAIN_LENGTH
 +				+ SSL3_RT_MAX_ENCRYPTED_OVERHEAD
 +				+ headerlen + align;
@@ -96,7 +96,7 @@
  			}
  #ifndef OPENSSL_NO_COMP
  		if (!(s->options & SSL_OP_NO_COMPRESSION))
-@@ -757,7 +764,15 @@ int ssl3_setup_write_buffer(SSL *s)
+@@ -757,7 +771,15 @@ int ssl3_setup_write_buffer(SSL *s)
  
  	if (s->s3->wbuf.buf == NULL)
  		{
@@ -113,7 +113,7 @@
  			+ SSL3_RT_SEND_MAX_ENCRYPTED_OVERHEAD
  			+ headerlen + align;
  #ifndef OPENSSL_NO_COMP
-@@ -767,7 +782,6 @@ int ssl3_setup_write_buffer(SSL *s)
+@@ -767,7 +789,6 @@ int ssl3_setup_write_buffer(SSL *s)
  		if (!(s->options & SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS))
  			len += headerlen + align
  				+ SSL3_RT_SEND_MAX_ENCRYPTED_OVERHEAD;
@@ -121,13 +121,13 @@
  		if ((p=freelist_extract(s->ctx, 0, len)) == NULL)
  			goto err;
  		s->s3->wbuf.buf = p;
-@@ -810,4 +824,3 @@ int ssl3_release_read_buffer(SSL *s)
+@@ -810,4 +831,3 @@ int ssl3_release_read_buffer(SSL *s)
  		}
  	return 1;
  	}
 -
---- openssl-1.0.0.orig/ssl/s3_pkt.c	2010-03-25 04:22:42.000000000 -0700
-+++ openssl-1.0.0/ssl/s3_pkt.c	2010-04-26 10:24:55.000000000 -0700
+--- openssl-1.0.0a.orig/ssl/s3_pkt.c	2010-03-25 11:22:42.000000000 +0000
++++ openssl-1.0.0a/ssl/s3_pkt.c	2010-08-25 21:12:39.000000000 +0000
 @@ -293,6 +293,11 @@ static int ssl3_get_record(SSL *s)
  	size_t extra;
  	int decryption_failed_or_bad_record_mac = 0;
@@ -161,7 +161,7 @@
 +			{
 +			if ((p=OPENSSL_realloc(s->s3->rbuf.buf, rr->length + SSL3_RT_HEADER_LENGTH + align))==NULL)
 +				{
-+				SSLerr(SSL_F_SSL3_GET_RECORD,ERR_R_INTERNAL_ERROR);
++				SSLerr(SSL_F_SSL3_GET_RECORD,ERR_R_MALLOC_FAILURE);
 +				goto err;
 +				}
 +			s->s3->rbuf.buf=p;
@@ -186,18 +186,37 @@
  		{
 -		if (n > s->max_send_fragment)
 -			nw=s->max_send_fragment;
-+		if (!(SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS))
-+			max_plain_length = s->max_send_fragment;
-+		else
++		if (type == SSL3_RT_APPLICATION_DATA && (SSL_get_mode(s) & SSL_MODE_SMALL_BUFFERS))
 +			max_plain_length = SSL3_RT_DEFAULT_PLAIN_LENGTH;
++		else
++			max_plain_length = s->max_send_fragment;
 +
 +		if (n > max_plain_length)
 +			nw = max_plain_length;
  		else
  			nw=n;
  
---- openssl-1.0.0.orig/ssl/ssl.h	2010-01-06 09:37:38.000000000 -0800
-+++ openssl-1.0.0/ssl/ssl.h	2010-04-13 17:06:03.000000000 -0700
+@@ -727,6 +727,18 @@ static int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
+ 		s->s3->empty_fragment_done = 1;
+ 		}
+ 
++	/* resize if necessary to hold the data. */
++	if (len + SSL3_RT_DEFAULT_WRITE_OVERHEAD > wb->len)
++		{
++		if ((p=OPENSSL_realloc(wb->buf, len + SSL3_RT_DEFAULT_WRITE_OVERHEAD))==NULL)
++			{
++			SSLerr(SSL_F_DO_SSL3_WRITE,ERR_R_MALLOC_FAILURE);
++			goto err;
++			}
++		wb->buf = p;
++		wb->len = len + SSL3_RT_DEFAULT_WRITE_OVERHEAD;
++		}
++
+ 	if (create_empty_fragment)
+ 		{
+ #if defined(SSL3_ALIGN_PAYLOAD) && SSL3_ALIGN_PAYLOAD!=0
+--- openssl-1.0.0a.orig/ssl/ssl.h	2010-01-06 17:37:38.000000000 +0000
++++ openssl-1.0.0a/ssl/ssl.h	2010-08-25 21:12:39.000000000 +0000
 @@ -602,6 +602,9 @@ typedef struct ssl_session_st
   * TLS only.)  "Released" buffers are put onto a free-list in the context
   * or just freed (depending on the context's setting for freelist_max_len). */
@@ -208,8 +227,8 @@
  
  /* Note: SSL[_CTX]_set_{options,mode} use |= op on the previous value,
   * they cannot be used to clear bits. */
---- openssl-1.0.0.orig/ssl/ssl3.h	2010-01-06 09:37:38.000000000 -0800
-+++ openssl-1.0.0/ssl/ssl3.h	2010-04-13 17:07:50.000000000 -0700
+--- openssl-1.0.0a.orig/ssl/ssl3.h	2010-01-06 17:37:38.000000000 +0000
++++ openssl-1.0.0a/ssl/ssl3.h	2010-08-25 21:12:39.000000000 +0000
 @@ -280,6 +280,9 @@ extern "C" {
  
  #define SSL3_RT_MAX_EXTRA			(16384)
@@ -234,13 +253,13 @@
  #define SSL3_MD_CLIENT_FINISHED_CONST	"\x43\x4C\x4E\x54"
  #define SSL3_MD_SERVER_FINISHED_CONST	"\x53\x52\x56\x52"
  
-@@ -634,4 +644,3 @@ typedef struct ssl3_state_st
+@@ -634,4 +645,3 @@ typedef struct ssl3_state_st
  }
  #endif
  #endif
 -
---- openssl-1.0.0.orig/ssl/ssltest.c	2010-01-24 08:57:38.000000000 -0800
-+++ openssl-1.0.0/ssl/ssltest.c	2010-04-13 17:01:07.000000000 -0700
+--- openssl-1.0.0a.orig/ssl/ssltest.c	2010-01-24 16:57:38.000000000 +0000
++++ openssl-1.0.0a/ssl/ssltest.c	2010-08-25 21:12:39.000000000 +0000
 @@ -316,6 +316,8 @@ static void sv_usage(void)
  	               "                 (default is sect163r2).\n");
  #endif
@@ -250,7 +269,7 @@
  	}
  
  static void print_details(SSL *c_ssl, const char *prefix)
-@@ -444,6 +446,9 @@ int opaque_prf_input_cb(SSL *ssl, void *
+@@ -444,6 +447,9 @@ int opaque_prf_input_cb(SSL *ssl, void *
  	return arg->ret;
  	}
  #endif
@@ -260,7 +279,7 @@
  
  int main(int argc, char *argv[])
  	{
-@@ -680,6 +685,14 @@ int main(int argc, char *argv[])
+@@ -680,6 +687,14 @@ int main(int argc, char *argv[])
  			{
  			test_cipherlist = 1;
  			}
@@ -275,7 +294,7 @@
  		else
  			{
  			fprintf(stderr,"unknown option %s\n",*argv);
-@@ -802,6 +815,21 @@ bad:
+@@ -802,6 +821,21 @@ bad:
  		SSL_CTX_set_cipher_list(s_ctx,cipher);
  		}
  
