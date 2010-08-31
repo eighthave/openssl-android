@@ -487,8 +487,8 @@ int ssl3_connect(SSL *s)
 			else
 				{
 				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128
-				    && s->s3->previous_client_finished_len == 0 /* no cutthrough on renegotiation (would complicate the state machine) */
-				    )
+				    && s->s3->previous_server_finished_len == 0 /* no cutthrough on renegotiation (would complicate the state machine) */
+				   )
 					{
 					if (s->s3->flags & SSL3_FLAGS_DELAY_CLIENT_FINISHED)
 						{

@@ -73,8 +73,8 @@ diff -uarp openssl-1.0.0.orig/ssl/s3_clnt.c openssl-1.0.0/ssl/s3_clnt.c
 -				if (s->tlsext_ticket_expected)
 -					s->s3->tmp.next_state=SSL3_ST_CR_SESSION_TICKET_A;
 +				if ((SSL_get_mode(s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) && SSL_get_cipher_bits(s, NULL) >= 128
-+				    && s->s3->previous_client_finished_len == 0 /* no cutthrough on renegotiation (would complicate the state machine) */
-+				    )
++				    && s->s3->previous_server_finished_len == 0 /* no cutthrough on renegotiation (would complicate the state machine) */
++				   )
 +					{
 +					if (s->s3->flags & SSL3_FLAGS_DELAY_CLIENT_FINISHED)
 +						{
@@ -209,7 +209,7 @@ diff -uarp openssl-1.0.0.orig/ssl/ssl_lib.c openssl-1.0.0/ssl/ssl_lib.c
 +		s->s3->in_read_app_data == 0 &&   /* cutthrough only applies to write() */
 +		(SSL_get_mode((SSL*)s) & SSL_MODE_HANDSHAKE_CUTTHROUGH) &&  /* cutthrough enabled */
 +		SSL_get_cipher_bits(s, NULL) >= 128 &&                      /* strong cipher choosen */
-+		s->s3->previous_client_finished_len == 0 &&                 /* not a renegotiation handshake */
++		s->s3->previous_server_finished_len == 0 &&                 /* not a renegotiation handshake */
 +		(s->state == SSL3_ST_CR_SESSION_TICKET_A ||                 /* ready to write app-data*/
 +			s->state == SSL3_ST_CR_FINISHED_A));
 +	}
