@@ -32,6 +32,9 @@
 #ifndef OPENSSL_NO_SEED
 # define OPENSSL_NO_SEED
 #endif
+#ifndef OPENSSL_NO_SHA0
+# define OPENSSL_NO_SHA0
+#endif
 #ifndef OPENSSL_NO_STORE
 # define OPENSSL_NO_STORE
 #endif
@@ -79,6 +82,9 @@
 # endif
 # if defined(OPENSSL_NO_SEED) && !defined(NO_SEED)
 #  define NO_SEED
+# endif
+# if defined(OPENSSL_NO_SHA0) && !defined(NO_SHA0)
+#  define NO_SHA0
 # endif
 # if defined(OPENSSL_NO_STORE) && !defined(NO_STORE)
 #  define NO_STORE

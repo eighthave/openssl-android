@@ -282,13 +282,11 @@ local_src_files := \
 	evp/m_dss.c \
 	evp/m_dss1.c \
 	evp/m_ecdsa.c \
-	evp/m_md2.c \
 	evp/m_md4.c \
 	evp/m_md5.c \
 	evp/m_mdc2.c \
 	evp/m_null.c \
 	evp/m_ripemd.c \
-	evp/m_sha.c \
 	evp/m_sha1.c \
 	evp/m_sigver.c \
 	evp/m_wp.c \
@@ -405,7 +403,6 @@ local_src_files := \
 	sha/sha256.c \
 	sha/sha512.c \
 	sha/sha_dgst.c \
-	sha/sha_one.c \
 	stack/stack.c \
 	ts/ts_err.c \
 	txt_db/txt_db.c \
