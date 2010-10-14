@@ -480,6 +480,8 @@ local_c_includes := \
 
 local_c_flags := -DNO_WINDOWS_BRAINDEATH
 
+#######################################
+
 # target
 include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../android-config.mk
@@ -504,7 +506,8 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= libcrypto
 include $(BUILD_SHARED_LIBRARY)
 
-# host
+#######################################
+# host shared library
 ifeq ($(WITH_HOST_DALVIK),true)
     include $(CLEAR_VARS)
     include $(LOCAL_PATH)/../android-config.mk
@@ -518,3 +521,18 @@ ifeq ($(WITH_HOST_DALVIK),true)
     LOCAL_MODULE:= libcrypto
     include $(BUILD_HOST_SHARED_LIBRARY)
 endif
+
+########################################
+# host static library, which is used by some SDK tools.
+
+include $(CLEAR_VARS)
+include $(LOCAL_PATH)/../android-config.mk
+LOCAL_SRC_FILES += $(local_src_files)
+LOCAL_CFLAGS += $(local_c_flags) -DPURIFY
+LOCAL_C_INCLUDES += $(local_c_includes)
+LOCAL_SRC_FILES += $(non_arm_src_files)
+LOCAL_STATIC_LIBRARIES += libz
+LOCAL_LDLIBS += -ldl
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE:= libcrypto_static
+include $(BUILD_HOST_STATIC_LIBRARY)
