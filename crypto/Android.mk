@@ -1,16 +1,13 @@
 LOCAL_PATH:= $(call my-dir)
 
-# TODO the current build system doesn't do this correctly
-#arm_cflags := -DOPENSSL_BN_ASM_MONT -DAES_ASM -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM
-#arm_src_files := \
-#    aes/asm/aes-armv4.s \
-#    bn/asm/armv4-mont.s \
-#    sha/asm/sha1-armv4-large.s \
-#    sha/asm/sha256-armv4.s \
-#    sha/asm/sha512-armv4.s
-#non_arm_src_files := aes/aes_core.c
-# temp workaround for above to get things working (no ARMv4 asm)
-arm_src_files := aes/aes_core.c
+arm_cflags := -DOPENSSL_BN_ASM_MONT -DAES_ASM -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM
+arm_src_files := \
+    aes/asm/aes-armv4.S \
+    bn/asm/armv4-mont.S \
+    sha/asm/sha1-armv4-large.S \
+    sha/asm/sha256-armv4.S \
+    sha/asm/sha512-armv4.S
+non_arm_src_files := aes/aes_core.c
 
 local_src_files := \
 	cryptlib.c \
