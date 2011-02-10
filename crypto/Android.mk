@@ -501,8 +501,6 @@ ifeq ($(TARGET_SIMULATOR),true)
 	# Make valgrind happy.
 	LOCAL_CFLAGS += -DPURIFY
     LOCAL_LDLIBS += -ldl
-else
-	LOCAL_SHARED_LIBRARIES += libdl
 endif
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= libcrypto
