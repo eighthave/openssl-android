@@ -55,7 +55,7 @@ LOCAL_SRC_FILES:= \
 
 #   cms.c ec.c s_server.c
 
-LOCAL_SHARED_LIBRARIES := \
+LOCAL_STATIC_LIBRARIES := \
 	libssl \
 	libcrypto 
 
@@ -64,6 +64,8 @@ LOCAL_C_INCLUDES := \
 	$(NDK_PROJECT_PATH)/include
 
 LOCAL_CFLAGS := -DMONOLITH
+
+LOCAL_LDLIBS += -lz
 
 include $(LOCAL_PATH)/../android-config.mk
 
