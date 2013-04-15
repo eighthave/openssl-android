@@ -501,7 +501,8 @@ ifeq ($(TARGET_SIMULATOR),true)
 endif
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= libcrypto
-include $(BUILD_SHARED_LIBRARY)
+#include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_STATIC_LIBRARY)
 
 #######################################
 # host shared library
